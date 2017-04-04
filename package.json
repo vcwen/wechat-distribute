@@ -1,0 +1,45 @@
+{
+  "name": "wechat-router",
+  "version": "0.0.1",
+  "description": "Wechat events and messages distribution",
+  "main": "server/server.js",
+  "scripts": {
+    "pretest": "rm -rf dist/ && tsc",
+    "test": "istanbul cover _mocha -- -R spec 'dist/**/*.spec.js'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wenwei1202/wechat-router.git"
+  },
+  "author": "vincent wen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wenwei1202/wechat-router/issues"
+  },
+  "homepage": "https://github.com/wenwei1202/wechat-router#readme",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "camelcase": "^4.0.0",
+    "debug": "^2.6.3",
+    "express-xml-bodyparser": "^0.3.0",
+    "lodash": "^4.17.4",
+    "moment": "^2.17.1",
+    "request": "^2.79.0",
+    "wechat": "^2.0.3"
+  },
+  "engines": {
+    "node": ">=6.0"
+  },
+  "devDependencies": {
+    "@types/async": "^2.0.39",
+    "@types/bluebird": "^3.5.2",
+    "@types/chai": "^3.4.35",
+    "@types/lodash": "^4.14.55",
+    "@types/mocha": "^2.2.40",
+    "@types/node": "^7.0.8",
+    "@types/request": "0.0.41",
+    "chai": "^3.5.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.2.0"
+  }
+}
