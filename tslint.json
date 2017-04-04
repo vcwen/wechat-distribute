@@ -1,0 +1,36 @@
+{
+    "extends": "tslint:recommended",
+    "rules": {
+        "semicolon": [
+            true,
+            "never"
+        ],
+        "align": [
+            true,
+            "statements"
+        ],
+        "typedef-whitespace": [
+            true,
+            {
+                "call-signature": "nospace",
+                "index-signature": "nospace",
+                "parameter": "nospace",
+                "property-declaration": "nospace",
+                "variable-declaration": "nospace"
+            },
+            {
+                "call-signature": "onespace",
+                "index-signature": "onespace",
+                "parameter": "space",
+                "property-declaration": "onespace",
+                "variable-declaration": "onespace"
+            }
+        ],
+        "quotemark": [
+            true,
+            "single",
+            "avoid-escape"
+        ],
+        "object-literal-sort-keys": false
+    }
+}
