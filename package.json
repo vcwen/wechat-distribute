@@ -2,7 +2,7 @@
   "name": "wechat-router",
   "version": "0.0.1",
   "description": "Wechat events and messages distribution",
-  "main": "server/server.js",
+  "main": "dist/main.js",
   "scripts": {
     "pretest": "rm -rf dist/ && tsc",
     "test": "istanbul cover _mocha -- -R spec 'dist/**/*.spec.js'"
