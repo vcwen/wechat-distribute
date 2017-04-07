@@ -9,10 +9,12 @@ function getRouteClients(route: Route, ...phases: string[]): [string, string[]] 
   const [phase, ...left] = phases
   let primary = route.primary
   let secondary = route.secondary
-  if (left.length > 0) {
+  if (phase) {
     let [subPrimary, subSecondary] = getRouteClients(route.specs.get(phase), ...left)
     if (subPrimary) {
-      secondary.push(primary)
+      if (primary) {
+        secondary.push(primary)
+      }
       primary = subPrimary
     }
     secondary = secondary.concat(subSecondary)

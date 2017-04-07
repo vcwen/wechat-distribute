@@ -53,6 +53,21 @@ describe('SimpleDataSource', () => {
         done()
       })
     })
+
+    it('should return empty promise if name is empty string or null', (done) => {
+      const simpleDs = new SimpleDataSource(routesObj, clientsObj)
+      simpleDs.getClient(null).then((client) => {
+        expect(client).to.be.null
+        done()
+      })
+    })
+    it('should return empty promise if client not exists', (done) => {
+      const simpleDs = new SimpleDataSource(routesObj, clientsObj)
+      simpleDs.getClient('main1').then((client) => {
+        expect(client).to.be.null
+        done()
+      })
+    })
   })
 
   describe('#getClients', () => {

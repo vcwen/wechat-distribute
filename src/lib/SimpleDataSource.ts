@@ -15,7 +15,12 @@ class SimpleDataSource extends DataSource {
   }
   public getClient(name: string): Promise<Client> {
     const client: any = _.get(this.clients, name)
-    return Promise.resolve(new Client(name, client.url))
+    if (_.isEmpty(client)) {
+      return Promise.resolve(null)
+    } else {
+      return Promise.resolve(new Client(name, client.url))
+    }
+
   }
   public getClients(...names: string[]): Promise<Client[]> {
     const clients = _.map(names, (name) => {

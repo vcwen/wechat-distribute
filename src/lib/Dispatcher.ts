@@ -21,30 +21,31 @@ class Dispatcher {
   public dispatch(req: any, res: any, next: (err?: any) => void) {
     const message = new Message(req.weixin)
     this.clientRouter.getClients(message).then(([primaryClient, secondaryClients]) => {
-      if (_.isEmpty(primaryClient) && _.isEmpty(secondaryClients)) {
+      if (_.isEmpty(primaryClient)) {
         next()
       } else {
         this.dispatchPrimary(primaryClient, req.rawBody, req, res)
-        this.dispatchSecondary(secondaryClients, req, res)
       }
-    }).catch((e) => {
+      this.dispatchSecondary(secondaryClients, req, res)
+    }).catch((e: Error) => {
       next(e)
     })
   }
   private dispatchPrimary(client: Client, body, req, res) {
     this.makeRequest(req, res, client, (response) => {
       if (response.statusCode === 200) {
-          response.pipe(res)
-        }
+        response.pipe(res)
+      }
     }, (err) => {
       logError('Primary Response Error: %o', err)
       res.sendStatus(500)
     }, Constants.PRIMARY_TIMEOUT)
   }
   private dispatchSecondary(clients: Client[], req, res) {
-    async.eachOf(clients, (client, index, cb) => {
+    async.eachOf(clients, (client) => {
       this.makeRequest(req, res, client, (response) => {
-          // Ingore secondary response
+        debug('Secondary request to %s succeeded.', client.url)
+        // Ingore secondary response
       }, (err) => {
         logError('Secondary Response Error: %o', err)
       }, Constants.SECONDARY_TIMEOUT)
