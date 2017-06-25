@@ -15,12 +15,8 @@ class MessageRouter {
         encodingAESKey: wechatAccount.encodingAESKey,
       }, dispatcher.dispatch.bind(dispatcher))
   }
-  public middlewarify(req, res, next) {
-    if (this.handler) {
-      this.handler.apply(null, arguments)
-    } else {
-      res.sendStatus(404)
-    }
+  public middlewarify() {
+    return this.handler
   }
 }
 

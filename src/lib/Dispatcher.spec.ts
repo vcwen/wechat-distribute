@@ -8,7 +8,7 @@ import * as _ from 'lodash'
 
 const Writable = stream.Writable
 const Readable = stream.Readable
-import  * as proxyquire from 'proxyquire'
+import * as proxyquire from 'proxyquire'
 import EventEmitter = require('events')
 const proxyquireStrict = proxyquire.noPreserveCache()
 class FakeRequestExec extends EventEmitter {}
@@ -119,7 +119,7 @@ describe('Dispatcher', () => {
       const dispatcher = new Dispather(clientRouter)
       const req = {
         weixin: wxMsg,
-        originalUrl: 'http://test.wechat.com/test?name=1',
+        url: 'http://test.wechat.com/test?name=1',
         rawBody: '<xml>',
       }
 
@@ -206,7 +206,7 @@ describe('Dispatcher', () => {
       const dispatcher = new Dispather(clientRouter)
       const req = {
         weixin: wxMsg,
-        originalUrl: 'http://test.wechat.com/test?name=1',
+        url: 'http://test.wechat.com/test?name=1',
         rawBody: '<xml>',
       }
 
@@ -293,7 +293,7 @@ describe('Dispatcher', () => {
       const dispatcher = new Dispather(clientRouter)
       const req = {
         weixin: wxMsg,
-        originalUrl: 'http://test.wechat.com/test?name=1',
+        url: 'http://test.wechat.com/test?name=1',
         rawBody: '<xml>',
       }
 
@@ -313,8 +313,8 @@ describe('Dispatcher', () => {
           done()
         }
       }
-      res.sendStatus = (statusCode) => {
-         expect(statusCode).to.equal(500)
+      res.end = () => {
+         expect(res.statusCode).to.equal(500)
        }
       const next = (err) => {}
       dispatcher.dispatch(req, res, next)
@@ -401,7 +401,7 @@ describe('Dispatcher', () => {
       const dispatcher = new Dispather(clientRouter)
       const req = {
         weixin: wxMsg,
-        originalUrl: 'http://test.wechat.com/test?name=1',
+        url: 'http://test.wechat.com/test?name=1',
         rawBody: '<xml>',
       }
 

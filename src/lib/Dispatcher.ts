@@ -2,7 +2,6 @@ import  url = require('url')
 import http = require('http')
 import * as async from 'async'
 import * as createDebug from 'debug'
-import * as express from 'express'
 import * as _ from 'lodash'
 import * as request from 'request'
 import Client from '../model/Client'
@@ -13,18 +12,23 @@ import Constants from './constants'
 const debug = createDebug('wechat-router')
 const logError = createDebug('wechat-router:error')
 
+interface ITransformedData {
+  weixin: any
+  rawBody: any
+}
 class Dispatcher {
   private clientRouter: ClientRouter
   constructor(clientRouter: ClientRouter) {
     this.clientRouter = clientRouter
   }
-  public dispatch(req: any, res: any, next: (err?: any) => void) {
+  public dispatch(req: http.IncomingMessage & ITransformedData, res: http.ClientResponse, next: (err?: any) => void) {
     const message = new Message(req.weixin)
     this.clientRouter.getClients(message).then(([primaryClient, secondaryClients]) => {
       if (_.isEmpty(primaryClient)) {
         next()
       } else {
         this.dispatchPrimary(primaryClient, req.rawBody, req, res)
+
       }
       this.dispatchSecondary(secondaryClients, req, res)
     }).catch((e: Error) => {
@@ -38,7 +42,8 @@ class Dispatcher {
       }
     }, (err) => {
       logError('Primary Response Error: %o', err)
-      res.sendStatus(500)
+      res.statusCode = 500
+      res.end()
     }, Constants.PRIMARY_TIMEOUT)
   }
   private dispatchSecondary(clients: Client[], req, res) {
@@ -52,10 +57,10 @@ class Dispatcher {
     })
 
   }
-  private makeRequest(req: any, res: any, client: Client,
-    responseHandler: (res: http.IncomingMessage & express.Response) => void,
+  private makeRequest(req: http.IncomingMessage & ITransformedData, res: http.ClientResponse, client: Client,
+    responseHandler: (res: http.IncomingMessage) => void,
     errorHandler: (err: {code: string}) => void, timeout: number): void {
-    const parsedUrl = url.parse(req.originalUrl)
+    const parsedUrl = url.parse(req.url)
     const body = req.rawBody
     const options: any = {
       url: url.resolve(client.url, parsedUrl.search),

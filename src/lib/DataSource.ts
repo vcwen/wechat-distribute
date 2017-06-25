@@ -16,7 +16,7 @@ abstract class DataSource {
       }
       const specs = new Map<string, Route> ()
       if (!_.isEmpty(routeObj.specs)) {
-        for (let key in routeObj.specs) {
+        for (const key in routeObj.specs) {
           if (routeObj.specs.hasOwnProperty(key)) {
             specs.set(key, loadRoute(routeObj.specs[key]))
           }

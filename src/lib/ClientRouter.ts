@@ -10,7 +10,7 @@ function getRouteClients(route: Route, ...phases: string[]): [string, string[]] 
   let primary = route.primary
   let secondary = route.secondary
   if (phase) {
-    let [subPrimary, subSecondary] = getRouteClients(route.specs.get(phase), ...left)
+    const [subPrimary, subSecondary] = getRouteClients(route.specs.get(phase), ...left)
     if (subPrimary) {
       if (primary) {
         secondary.push(primary)
@@ -30,7 +30,7 @@ class ClientRouter {
   }
 
   public getClients(message: Message): Promise<[Client, Client[]]> {
-     let phases: string[] = message.msgType === 'event' ?
+     const phases: string[] = message.msgType === 'event' ?
        [message.msgType, message.event] : [message.msgType]
      return this.dataSource.getRootRoute().then((rootRoute: Route) => {
        let [primary, secondary] = getRouteClients(rootRoute, ...phases)
