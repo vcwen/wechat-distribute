@@ -5,11 +5,12 @@ import SimpleDataSource from './SimpleDataSource'
 import stream = require('stream')
 import fs = require('fs')
 import * as _ from 'lodash'
-
+import IDispatcher from './Dispatcher'
 const Writable = stream.Writable
 const Readable = stream.Readable
 import * as proxyquire from 'proxyquire'
 import EventEmitter = require('events')
+import * as url from 'url'
 const proxyquireStrict = proxyquire.noPreserveCache()
 class FakeRequestExec extends EventEmitter {}
 const expect = chai.expect
@@ -78,338 +79,55 @@ describe('Dispatcher', () => {
         Event: 'CLICK',
         EventKey: 'article_57d114fc16a64320b2b48a0f',
       }
-      const expectCount = 6
+      const expectCount = 7
       let count = 0
+      const targetUrls = _.map(clientsObj, (item) => item.url)
       const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
         return item.indexOf('click') === -1
       })
       const debugStub = (name) => {
-        if (name === 'wechat-router') {
+        if (name === 'wechat-distribute') {
           return (text, url) => {
             count++
-            expect(url).to.be.oneOf(secondaryUrls)
-            if (count === expectCount) {
-              done()
-            }
           }
         }
       }
       const requestStub = {
-        post: (options, callback) => {
-          const response: any = {
-            pipe(target) {
-              if (options.url.startsWith('http://main.com/click')) {
-                target.pipe('primary', options.url)
-              } else {
-                target.pipe('secondary', options.url)
-              }
-            },
+        post: (url, options) => {
+          expect(url.split('?')[0]).to.be.oneOf(targetUrls)
+          count++
+          if (count === expectCount) {
+            done()
           }
-          response.statusCode = 200
-          const fakeReqExec = new FakeRequestExec()
-          setTimeout(() => {
-            fakeReqExec.emit('response', response)
-          }, 1000)
-
-          callback(null, response, '')
-          return fakeReqExec
+          return url
         },
       }
       const Dispather = proxyquireStrict('./Dispatcher', {request: requestStub, debug: debugStub}).default
-      const dispatcher = new Dispather(clientRouter)
-      const req = {
-        weixin: wxMsg,
-        url: 'http://test.wechat.com/test?name=1',
-        rawBody: '<xml>',
-      }
+      const dispatcher: IDispatcher = new Dispather(clientRouter)
 
       const primaryUrl = 'http://main.com/click'
-
-      const res: any = {}
-
-      res.pipe =  (type, url) => {
-        if (type === 'primary') {
-          expect(url.split('?')[0]).to.equal(primaryUrl)
+      const ctx: any = {
+        search: '?param=search',
+        set body(val) {
+          expect(val).to.equal('http://main.com/click?param=search')
           count++
-        } else {
-          expect(url.split('?')[0]).to.be.oneOf(secondaryUrls)
-          count++
-        }
-        if (count === expectCount) {
-          done()
-        }
-      }
-      const next = (err) => {}
-      dispatcher.dispatch(req, res, next)
-    })
-    it('should dispatch message to target primary and secondary clients when some of secondary have error', (done) => {
-      const simpleDs = new SimpleDataSource(routesObj, clientsObj)
-      const clientRouter = new ClientRouter(simpleDs)
-      const wxMsg =  {
-        ToUserName: 'gh_188612cc13bf',
-        FromUserName: 'ouIpDs1npAsCTtjcQ_ERI3LRpfIQ',
-        CreateTime: 1487248700,
-        MsgType: 'event',
-        Event: 'CLICK',
-        EventKey: 'article_57d114fc16a64320b2b48a0f',
-      }
-      const expectCount = 6
-      let count = 0
-      const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
-        return item.indexOf('click') === -1
-      })
-      const debugStub = (name) => {
-        if (name === 'wechat-router') {
-          return (text, url) => {
-            count++
-            expect(url).to.be.oneOf(secondaryUrls)
-            if (count === expectCount) {
-              done()
-            }
+          if (count === expectCount) {
+            done()
           }
-        } else {
-          return (text, error) => {
-            count++
-            expect(error).to.be.an('error')
-            if (count === expectCount) {
-              done()
-            }
-          }
-        }
-      }
-      const requestStub = {
-        post: (options, callback) => {
-          const response: any = {
-            pipe(target) {
-              if (options.url.startsWith('http://main.com/click')) {
-                target.pipe('primary', options.url)
-              } else {
-                target.pipe('secondary', options.url)
-              }
-            },
-          }
-          response.statusCode = 200
-          const fakeReqExec = new FakeRequestExec()
-          setTimeout(() => {
-            fakeReqExec.emit('response', response)
-          }, 1000)
-          if (options.url.startsWith('http://main.com/datacube')) {
-            callback(new Error('request error'), response, 'error message')
-          } else {
-             callback(null, response, 'xml body')
-          }
-
-          return fakeReqExec
         },
+        onerror: () => {},
+        req: {},
+        res: {},
       }
-      const Dispather = proxyquireStrict('./Dispatcher', {request: requestStub, debug: debugStub}).default
-      const dispatcher = new Dispather(clientRouter)
-      const req = {
-        weixin: wxMsg,
-        url: 'http://test.wechat.com/test?name=1',
-        rawBody: '<xml>',
-      }
-
-      const primaryUrl = 'http://main.com/click'
-
-      const res: any = {}
-
-      res.pipe =  (type, url) => {
-        if (type === 'primary') {
-          expect(url.split('?')[0]).to.equal(primaryUrl)
-          count++
-        } else {
-          expect(url.split('?')[0]).to.be.oneOf(secondaryUrls)
-          count++
-        }
-        if (count === expectCount) {
-          done()
-        }
-      }
-      const next = (err) => {}
-      dispatcher.dispatch(req, res, next)
-    })
-    it('should dispatch message to target  secondary clients when primary has error', (done) => {
-      const simpleDs = new SimpleDataSource(routesObj, clientsObj)
-      const clientRouter = new ClientRouter(simpleDs)
-      const wxMsg =  {
-        ToUserName: 'gh_188612cc13bf',
-        FromUserName: 'ouIpDs1npAsCTtjcQ_ERI3LRpfIQ',
-        CreateTime: 1487248700,
-        MsgType: 'event',
-        Event: 'CLICK',
-        EventKey: 'article_57d114fc16a64320b2b48a0f',
-      }
-      const expectCount = 6
-      let count = 0
-      const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
-        return item.indexOf('click') === -1
-      })
-      const debugStub = (name) => {
-        if (name === 'wechat-router') {
-          return (text, url) => {
-            count++
-            expect(url).to.be.oneOf(secondaryUrls)
-            if (count === expectCount) {
-              done()
-            }
-          }
-        } else {
-          return (text, error) => {
-            count++
-            expect(error).to.be.an('error')
-            if (count === expectCount) {
-              done()
-            }
-          }
-        }
-      }
-      const requestStub = {
-        post: (options, callback) => {
-          const response: any = {
-            pipe(target) {
-              if (options.url.startsWith('http://main.com/click')) {
-                target.pipe('primary', options.url)
-              } else {
-                target.pipe('secondary', options.url)
-              }
-            },
-          }
-          response.statusCode = 200
-          const fakeReqExec = new FakeRequestExec()
-          setTimeout(() => {
-            fakeReqExec.emit('response', response)
-          }, 1000)
-          if (options.url.startsWith('http://main.com/click')) {
-            callback(new Error('request error'), response, 'error message')
-          } else {
-             callback(null, response, 'xml body')
-          }
-
-          return fakeReqExec
-        },
-      }
-      const Dispather = proxyquireStrict('./Dispatcher', {request: requestStub, debug: debugStub}).default
-      const dispatcher = new Dispather(clientRouter)
-      const req = {
-        weixin: wxMsg,
-        url: 'http://test.wechat.com/test?name=1',
-        rawBody: '<xml>',
-      }
-
-      const primaryUrl = 'http://main.com/click'
-
-      const res: any = {}
-
-      res.pipe =  (type, url) => {
-        if (type === 'primary') {
-          expect(url.split('?')[0]).to.equal(primaryUrl)
-          count++
-        } else {
-          expect(url.split('?')[0]).to.be.oneOf(secondaryUrls)
-          count++
-        }
-        if (count === expectCount) {
-          done()
-        }
-      }
-      res.end = () => {
-         expect(res.statusCode).to.equal(500)
-       }
-      const next = (err) => {}
-      dispatcher.dispatch(req, res, next)
-    })
-
-    it('should dispatch message to target secondary clients and fallback to next when primary is not present',
-      (done) => {
-      const noPrimaryRoutesObj: any = {
-        secondary: ['secondary'],
-        specs: {
-          text: {
-            primary: 'textPrimary',
+      ctx.req.pipe  = (url) => {
+        return {
+          on: (event) => {},
+          pipe: () => {
+            return url
           },
-          event: {
-            secondary: ['event_secondary1', 'event_secondary2'],
-            specs: {
-              click: {
-                secondary: 'datacube',
-              },
-            },
-          },
-        },
-      }
-      const simpleDs = new SimpleDataSource(noPrimaryRoutesObj, clientsObj)
-      const clientRouter = new ClientRouter(simpleDs)
-      const wxMsg =  {
-        ToUserName: 'gh_188612cc13bf',
-        FromUserName: 'ouIpDs1npAsCTtjcQ_ERI3LRpfIQ',
-        CreateTime: 1487248700,
-        MsgType: 'event',
-        Event: 'CLICK',
-        EventKey: 'article_57d114fc16a64320b2b48a0f',
-      }
-      const expectCount = 5
-      let count = 0
-      const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
-        return item.indexOf('click') === -1
-      })
-      const debugStub = (name) => {
-        if (name === 'wechat-router') {
-          return (text, url) => {
-            count++
-            expect(url).to.be.oneOf(secondaryUrls)
-            if (count === expectCount) {
-              done()
-            }
-          }
-        } else {
-          return (text, error) => {
-            count++
-            expect(error).to.be.an('error')
-            if (count === expectCount) {
-              done()
-            }
-          }
         }
       }
-      const requestStub = {
-        post: (options, callback) => {
-          const response: any = {
-            pipe(target) {
-              if (options.url.startsWith('http://main.com/click')) {
-                target.pipe('primary', options.url)
-              } else {
-                target.pipe('secondary', options.url)
-              }
-            },
-          }
-          response.statusCode = 200
-          const fakeReqExec = new FakeRequestExec()
-          setTimeout(() => {
-            fakeReqExec.emit('response', response)
-          }, 1000)
-          if (options.url.startsWith('http://main.com/click')) {
-            callback(new Error('request error'), response, 'error message')
-          } else {
-             callback(null, response, 'xml body')
-          }
-
-          return fakeReqExec
-        },
-      }
-      const Dispather = proxyquireStrict('./Dispatcher', {request: requestStub, debug: debugStub}).default
-      const dispatcher = new Dispather(clientRouter)
-      const req = {
-        weixin: wxMsg,
-        url: 'http://test.wechat.com/test?name=1',
-        rawBody: '<xml>',
-      }
-
-      const primaryUrl = 'http://main.com/click'
-
-      const res: any = {}
-
-      res.pipe =  (type, url) => {
+      ctx.res.pipe =  (type, url) => {
         if (type === 'primary') {
           expect(url.split('?')[0]).to.equal(primaryUrl)
           count++
@@ -421,17 +139,7 @@ describe('Dispatcher', () => {
           done()
         }
       }
-      res.sendStatus = (statusCode) => {
-         expect(statusCode).to.equal(500)
-       }
-      const next = (err) => {
-        expect(err).to.be.undefined
-        count++
-        if (count === expectCount) {
-          done()
-        }
-      }
-      dispatcher.dispatch(req, res, next)
+      dispatcher.dispatch(ctx, new Message(wxMsg))
     })
   })
 })

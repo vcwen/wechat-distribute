@@ -1,88 +1,62 @@
 import  url = require('url')
 import http = require('http')
-import * as async from 'async'
 import * as createDebug from 'debug'
+import * as Koa from 'koa'
 import * as _ from 'lodash'
+
 import * as request from 'request'
+import {PassThrough} from 'stream'
 import Client from '../model/Client'
 import Message from '../model/Message'
+import WechatAccount from '../model/WechatAccount'
 import ClientRouter from './ClientRouter'
 import Constants from './constants'
 
-const debug = createDebug('wechat-router')
-const logError = createDebug('wechat-router:error')
+const debug = createDebug('wechat-distribute')
 
-interface ITransformedData {
-  weixin: any
-  rawBody: any
-}
 class Dispatcher {
   private clientRouter: ClientRouter
   constructor(clientRouter: ClientRouter) {
     this.clientRouter = clientRouter
   }
-  public dispatch(req: http.IncomingMessage & ITransformedData, res: http.ClientResponse, next: (err?: any) => void) {
-    const message = new Message(req.weixin)
-    this.clientRouter.getClients(message).then(([primaryClient, secondaryClients]) => {
-      if (_.isEmpty(primaryClient)) {
-        next()
-      } else {
-        this.dispatchPrimary(primaryClient, req.rawBody, req, res)
-
-      }
-      this.dispatchSecondary(secondaryClients, req, res)
-    }).catch((e: Error) => {
-      next(e)
-    })
-  }
-  private dispatchPrimary(client: Client, body, req, res) {
-    this.makeRequest(req, res, client, (response) => {
-      if (response.statusCode === 200) {
-        response.pipe(res)
-      }
-    }, (err) => {
-      logError('Primary Response Error: %o', err)
-      res.statusCode = 500
-      res.end()
-    }, Constants.PRIMARY_TIMEOUT)
-  }
-  private dispatchSecondary(clients: Client[], req, res) {
-    async.eachOf(clients, (client) => {
-      this.makeRequest(req, res, client, (response) => {
-        debug('Secondary request to %s succeeded.', client.url)
-        // Ingore secondary response
-      }, (err) => {
-        logError('Secondary Response Error: %o', err)
-      }, Constants.SECONDARY_TIMEOUT)
-    })
-
-  }
-  private makeRequest(req: http.IncomingMessage & ITransformedData, res: http.ClientResponse, client: Client,
-    responseHandler: (res: http.IncomingMessage) => void,
-    errorHandler: (err: {code: string}) => void, timeout: number): void {
-    const parsedUrl = url.parse(req.url)
-    const body = req.rawBody
-    const options: any = {
-      url: url.resolve(client.url, parsedUrl.search),
-      body,
-      headers: {
-        'Content-Type': 'text/xml',
-        'Content-Length': Buffer.byteLength(body),
-      },
-      timeout,
+  public async dispatch(ctx: Koa.Context, message: Message) {
+    const [primaryClient, secondaryClients] = await this.clientRouter.getClients(message)
+    if (_.isEmpty(primaryClient)) {
+      ctx.status = 404
+    } else {
+      this.dispatchPrimary(ctx, primaryClient)
     }
-    request.post(options, (err, response, content) => {
-      let error = null
-      if (err) {
-        error = err
-      } else if (response.statusCode !== 200) {
-        error = {statusCode: response.statusCode, body: content}
-      }
-      if (error) {
-        Reflect.apply(errorHandler, undefined, [error])
-      }
+    this.dispatchSecondary(ctx, secondaryClients)
+  }
+  private dispatchPrimary(ctx: Koa.Context, client: Client ) {
+    this.makeRequest(ctx, client, true, Constants.PRIMARY_TIMEOUT)
+  }
+  private dispatchSecondary(ctx: Koa.Context, clients: Client[]) {
+    clients.forEach((client) => {
+      this.makeRequest(ctx, client, false, Constants.SECONDARY_TIMEOUT)
     })
-      .on('response', responseHandler)
+
+  }
+  private makeRequest(ctx: Koa.Context, client: Client, isPrimary: boolean, timeout: number): void {
+    const response = ctx.req.pipe(request.post(url.resolve(client.url, ctx.search), {timeout}))
+    const responseHandler = (res: http.IncomingMessage) => {
+      if (res.statusCode === 200) {
+        debug(`Request to ${client.url} succeeded.`)
+      } else {
+        debug(`Request to ${client.url} failed with status ${res.statusCode}.` )
+      }
+    }
+    const errorHandler = (err) => {
+      debug(`Request to ${client.url} failed with error ${err}.`)
+      if (isPrimary) {
+        ctx.onerror.apply(ctx, arguments)
+      }
+    }
+    response.on('response', responseHandler)
+    response.on('error', errorHandler)
+    if (isPrimary) {
+      ctx.body = response.pipe(new PassThrough())
+    }
   }
 }
 
