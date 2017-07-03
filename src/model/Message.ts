@@ -6,10 +6,10 @@ class Message  {
   public msgType: string
   public event?: string
   public eventKey?: string
-  constructor(wechatMesage: any) {
-    for (let key in wechatMesage) {
-      if (wechatMesage.hasOwnProperty(key)) {
-        let value = wechatMesage[key]
+  constructor(originalMesage: any) {
+    for (let key in originalMesage) {
+      if (originalMesage.hasOwnProperty(key)) {
+        let value = originalMesage[key]
         key = camelCase(key)
         if (key === 'event' && value) {
           value = camelCase(value)
