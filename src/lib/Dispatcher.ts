@@ -49,7 +49,7 @@ class Dispatcher {
     const errorHandler = (err) => {
       debug(`Request to ${client.url} failed with error ${err}.`)
       if (isPrimary) {
-        ctx.onerror.apply(ctx, arguments)
+        ctx.onerror.call(ctx, err)
       }
     }
     response.on('response', responseHandler)
