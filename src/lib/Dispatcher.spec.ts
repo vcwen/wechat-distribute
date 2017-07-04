@@ -5,12 +5,13 @@ import SimpleDataSource from './SimpleDataSource'
 import stream = require('stream')
 import fs = require('fs')
 import * as _ from 'lodash'
-import IDispatcher from './Dispatcher'
+import Dispatcher from './Dispatcher'
 const Writable = stream.Writable
 const Readable = stream.Readable
 import * as proxyquire from 'proxyquire'
 import EventEmitter = require('events')
 import * as url from 'url'
+import Constants from './constants'
 const proxyquireStrict = proxyquire.noPreserveCache()
 class FakeRequestExec extends EventEmitter {}
 const expect = chai.expect
@@ -59,11 +60,11 @@ describe('Dispatcher', () => {
       }
   describe('#constructor', () => {
     it('should  create Dispatcher', () => {
-      const Dispather = proxyquireStrict('./Dispatcher', {}).default
+
       const simpleDs = new SimpleDataSource(routesObj, clientsObj)
       const clientRouter = new ClientRouter(simpleDs)
-      const dispatcher = new Dispather(clientRouter)
-      expect(dispatcher).to.be.instanceof(Dispather)
+      const dispatcher = new Dispatcher(clientRouter)
+      expect(dispatcher).to.be.instanceof(Dispatcher)
     })
   })
 
@@ -79,41 +80,86 @@ describe('Dispatcher', () => {
         Event: 'CLICK',
         EventKey: 'article_57d114fc16a64320b2b48a0f',
       }
-      const expectCount = 7
-      let count = 0
       const targetUrls = _.map(clientsObj, (item) => item.url)
       const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
         return item.indexOf('click') === -1
       })
-      const debugStub = (name) => {
-        if (name === 'wechat-distribute') {
-          return (text, url) => {
-            count++
-          }
-        }
+
+      const dispatcher: Dispatcher = new Dispatcher({} as any);
+      (dispatcher as any).clientRouter = {
+        async getClients(message) {
+          return ['http://main.com/click', secondaryUrls]
+        },
+      };
+      (dispatcher as any).dispatchPrimary = async (ctx, client) => {
+        expect(client).to.equal('http://main.com/click')
       }
-      const requestStub = {
-        post: (url, options) => {
-          expect(url.split('?')[0]).to.be.oneOf(targetUrls)
-          count++
-          if (count === expectCount) {
-            done()
-          }
-          return url
+      (dispatcher as any).dispatchSecondary = async (ctx, clients) => {
+        expect(clients).to.equal(secondaryUrls)
+        done()
+      }
+      const ctx: any = {}
+      dispatcher.dispatch(ctx, new Message(wxMsg))
+    })
+    it('should return 404 when primary is not present', (done) => {
+      const dispatcher = new Dispatcher({} as any)
+      const targetUrls = _.map(clientsObj, (item) => item.url)
+      const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
+        return item.indexOf('click') === -1
+      });
+      (dispatcher as any).clientRouter = {
+        async getClients(message) {
+          return ['', secondaryUrls]
+        },
+      };
+      (dispatcher as any).dispatchPrimary = async (ctx, client) => {
+        expect(client).to.equal('http://main.com/click')
+      }
+      (dispatcher as any).dispatchSecondary = async (ctx, clients) => {
+        expect(clients).to.equal(secondaryUrls)
+        done()
+      }
+      const context: any = {
+        set status(val) {
+          expect(val).to.equal(404)
         },
       }
-      const Dispather = proxyquireStrict('./Dispatcher', {request: requestStub, debug: debugStub}).default
-      const dispatcher: IDispatcher = new Dispather(clientRouter)
-
-      const primaryUrl = 'http://main.com/click'
+      dispatcher.dispatch(context, {} as any)
+    })
+  })
+  describe('#dispatchPrimary', () => {
+    it('should call makeRequest with correct params', () => {
+      const dispatcher: any = new Dispatcher({} as any)
+      const context: any = {};
+      (dispatcher as any).makeRequest =  (ctx, client, isPrimary, timeout) => {
+        expect(ctx).to.equal(context)
+        expect(client).to.equal('primary')
+        expect(isPrimary).to.equal(true)
+        expect(timeout).to.equal(Constants.PRIMARY_TIMEOUT)
+      }
+      dispatcher.dispatchPrimary(context, 'primary')
+    })
+  })
+  describe('#dispatchSecondary', () => {
+    it('should call makeRequest with correct params', () => {
+      const dispatcher: any = new Dispatcher({} as any)
+      const context: any = {};
+      (dispatcher as any).makeRequest =  (ctx, client, isPrimary, timeout) => {
+        expect(ctx).to.equal(context)
+        expect(client).to.be.oneOf(['secondaryUrl_1', 'secondaryUrl_2'])
+        expect(isPrimary).to.equal(false)
+        expect(timeout).to.equal(Constants.SECONDARY_TIMEOUT)
+      }
+      dispatcher.dispatchSecondary(context, ['secondaryUrl_1', 'secondaryUrl_2'])
+    })
+  })
+  describe('#makeRequest', () => {
+    it('should be able to make primary request', (done) => {
       const ctx: any = {
         search: '?param=search',
         set body(val) {
           expect(val).to.equal('http://main.com/click?param=search')
-          count++
-          if (count === expectCount) {
-            done()
-          }
+          done()
         },
         onerror: () => {},
         req: {},
@@ -127,19 +173,69 @@ describe('Dispatcher', () => {
           },
         }
       }
-      ctx.res.pipe =  (type, url) => {
-        if (type === 'primary') {
-          expect(url.split('?')[0]).to.equal(primaryUrl)
-          count++
-        } else {
-          expect(url.split('?')[0]).to.be.oneOf(secondaryUrls)
-          count++
-        }
-        if (count === expectCount) {
-          done()
+      const requestStub = {
+        post: (url, options) => {
+          return url
+        },
+      }
+      const Dispatcher = proxyquireStrict('./Dispatcher', {request: requestStub}).default
+      const dispatcher: any = new Dispatcher({} as any)
+      dispatcher.makeRequest(ctx, {url: 'http://main.com/click'}, true, 2000)
+    })
+    it('should be able to make secondary request', (done) => {
+      const ctx: any = {
+        search: '?param=search',
+        onerror: () => {},
+        req: {},
+        res: {},
+      }
+      ctx.req.pipe  = (url) => {
+        expect(url).to.equal('http://main.com/secondary?param=search')
+        done()
+        return {
+          on: (event) => {},
+          pipe: () => {
+            return url
+          },
         }
       }
-      dispatcher.dispatch(ctx, new Message(wxMsg))
+      const requestStub = {
+        post: (url, options) => {
+          return url
+        },
+      }
+      const Dispatcher = proxyquireStrict('./Dispatcher', {request: requestStub}).default
+      const dispatcher: any = new Dispatcher({} as any)
+      dispatcher.makeRequest(ctx, {url: 'http://main.com/secondary'}, true, 2000)
+    })
+    it('should handle the error when error occurs in primary request', (done) => {
+      const ctx: any = {
+        onerror: (err) => {
+          expect(err).to.be.instanceof(Error)
+          done()
+        },
+        search: '?param=search',
+        req: {},
+        res: {},
+      }
+      ctx.req.pipe = (url) => {
+        const fakeRequest = new FakeRequestExec()
+        setTimeout(() => {
+          fakeRequest.emit('error', new Error('something wrong.'))
+        }, 100);
+        (fakeRequest as any).pipe = () => {
+          return 'body'
+        }
+        return fakeRequest
+      }
+      const requestStub = {
+        post: (url, options) => {
+          return url
+        },
+      }
+      const Dispatcher = proxyquireStrict('./Dispatcher', {request: requestStub}).default
+      const dispatcher: any = new Dispatcher({} as any)
+      dispatcher.makeRequest(ctx, {url: 'http://main.com/click'}, true, 2000)
     })
   })
 })
