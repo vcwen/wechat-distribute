@@ -11,9 +11,10 @@ class MessageRouter {
   private account: WechatAccount
   private dispatcher: Dispatcher
   constructor(wechatAccount: WechatAccount, dataSource: DataSource) {
-      const clientRouter = new ClientRouter(dataSource)
-      const dispatcher = new Dispatcher(clientRouter)
-      this.cryptor = new WechatCrypto(wechatAccount.token, wechatAccount.encodingAESKey, wechatAccount.appId)
+    this.account = wechatAccount
+    const clientRouter = new ClientRouter(dataSource)
+    const dispatcher = new Dispatcher(clientRouter)
+    this.cryptor = new WechatCrypto(wechatAccount.token, wechatAccount.encodingAESKey, wechatAccount.appId)
   }
   public middlewarify() {
     return async (ctx: Koa.Context) => {
@@ -44,7 +45,7 @@ class MessageRouter {
       } else if (ctx.method === 'POST') {
         if (!encrypted) {
           if (query.signature !== Helper.getSignature(timestamp, nonce, this.account.token)) {
-            ctx.throw(401, 'Invalid signature')
+            return ctx.throw(401, 'Invalid signature')
           }
         }
         const message = await Helper.extractWechatMessage(ctx, encrypted)
