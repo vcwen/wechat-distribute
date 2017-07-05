@@ -17,24 +17,6 @@ class FakeRequestExec extends EventEmitter {}
 const expect = chai.expect
 
 describe('Dispatcher', () => {
-  const routesObj: any = {
-        primary: 'main',
-        secondary: ['secondary'],
-        specs: {
-          text: {
-            primary: 'textPrimary',
-          },
-          event: {
-            secondary: ['event_secondary1', 'event_secondary2'],
-            specs: {
-              click: {
-                primary: 'click',
-                secondary: 'datacube',
-              },
-            },
-          },
-        },
-      }
   const clientsObj = {
         main: {
           url: 'http://main.com/test',
@@ -60,26 +42,14 @@ describe('Dispatcher', () => {
       }
   describe('#constructor', () => {
     it('should  create Dispatcher', () => {
-
-      const simpleDs = new SimpleDataSource(routesObj, clientsObj)
-      const clientRouter = new ClientRouter(simpleDs)
-      const dispatcher = new Dispatcher(clientRouter)
+      const dispatcher = new Dispatcher({} as any)
       expect(dispatcher).to.be.instanceof(Dispatcher)
     })
   })
 
   describe('#dispatch', () => {
     it('should dispatch message to target primary and secondary clients', (done) => {
-      const simpleDs = new SimpleDataSource(routesObj, clientsObj)
-      const clientRouter = new ClientRouter(simpleDs)
-      const wxMsg =  {
-        ToUserName: 'gh_188612cc13bf',
-        FromUserName: 'ouIpDs1npAsCTtjcQ_ERI3LRpfIQ',
-        CreateTime: 1487248700,
-        MsgType: 'event',
-        Event: 'CLICK',
-        EventKey: 'article_57d114fc16a64320b2b48a0f',
-      }
+
       const targetUrls = _.map(clientsObj, (item) => item.url)
       const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
         return item.indexOf('click') === -1
@@ -99,7 +69,7 @@ describe('Dispatcher', () => {
         done()
       }
       const ctx: any = {}
-      dispatcher.dispatch(ctx, new Message(wxMsg))
+      dispatcher.dispatch(ctx, {} as any)
     })
     it('should return 404 when primary is not present', (done) => {
       const dispatcher = new Dispatcher({} as any)
