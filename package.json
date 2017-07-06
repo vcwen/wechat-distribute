@@ -1,6 +1,6 @@
 {
   "name": "wechat-distribute",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Wechat events and messages distribution",
   "main": "dist/main.js",
   "scripts": {
