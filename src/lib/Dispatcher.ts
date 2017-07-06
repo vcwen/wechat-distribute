@@ -24,7 +24,7 @@ class Dispatcher {
     if (_.isEmpty(primaryClient)) {
       ctx.status = 404
     } else {
-      this.dispatchPrimary(ctx, primaryClient)
+      await this.dispatchPrimary(ctx, primaryClient)
     }
     this.dispatchSecondary(ctx, secondaryClients)
   }
@@ -37,13 +37,13 @@ class Dispatcher {
     })
 
   }
-  private makeRequest(ctx: Koa.Context, client: Client, isPrimary: boolean, timeout: number): void {
+  private async makeRequest(ctx: Koa.Context, client: Client, isPrimary: boolean, timeout: number) {
     const response = ctx.req.pipe(request.post(url.resolve(client.url, ctx.search), {timeout}))
     const responseHandler = (res: http.IncomingMessage) => {
       if (res.statusCode === 200) {
         debug(`Request to ${client.url} succeeded.`)
       } else {
-        debug(`Request to ${client.url} failed with status ${res.statusCode}.` )
+         debug(`Request to ${client.url} failed with status ${res.statusCode}.` )
       }
     }
     const errorHandler = (err) => {
@@ -55,6 +55,8 @@ class Dispatcher {
     response.on('response', responseHandler)
     response.on('error', errorHandler)
     if (isPrimary) {
+      ctx.status = 200
+      ctx.set('Content-Type', 'text/xml')
       ctx.body = response.pipe(new PassThrough())
     }
   }
