@@ -5,6 +5,7 @@ import * as http from 'http'
 import * as Koa from 'koa'
 import * as Router from 'koa-router'
 import * as qs from 'querystring'
+import * as getRawBody from 'raw-body'
 import * as superttset from 'supertest'
 import * as util from 'util'
 import * as mock from 'wechat-message-mock'
@@ -12,7 +13,7 @@ import {MessageHelper, WechatMessage} from 'wechat-message-mock'
 import {MessageRouter, SimpleDataSource, WechatAccount} from '../main'
 const expect = chai.expect
 const app = new Koa()
-const app2 = new Koa()
+const appPrimary = new Koa()
 const appSecondary = new Koa()
 const tpl = [
   '<xml>',
@@ -72,18 +73,6 @@ const tpl = [
     '<% } %>',
   '</xml>',
 ].join('')
-app2.use(async (ctx) => {
-  const info = {
-        sp: 'gaofushuai',
-        user: 'cs',
-        type: 'text',
-        text: '测试中',
-      }
-  const template = ejs.compile(tpl)
-  ctx.body = template(info)
-  ctx.status = 200
-  ctx.set('Content-Type', 'application/xml')
-})
 
 const router = new Router()
 const account = new WechatAccount('test', 'appId', 'appSecret', 'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
@@ -138,9 +127,35 @@ const request = superttset(app.listen())
 
 describe('wechat-distributor', () => {
   it('should be able to distibute message to primary client.', (done) => {
-    const primaryServer: any = Promise.promisifyAll(http.createServer(app2.callback()))
+    const timestamp = Math.floor(Date.now() / 1000)
+    const expectedXml = `<xml>
+<ToUserName><![CDATA[jay]]></ToUserName>
+<FromUserName><![CDATA[vincent]]></FromUserName>
+<CreateTime>${timestamp}</CreateTime>
+<MsgType><![CDATA[event]]></MsgType>
+<Event><![CDATA[CLICK]]></Event>
+<EventKey><![CDATA[event_key_123]]></EventKey>\n</xml>`
+    appPrimary.use(async (ctx) => {
+      const xml: string = await getRawBody(ctx.req, {
+        length: ctx.length,
+        limit: '1mb',
+        encoding: 'utf8',
+      })
+      expect(xml).to.equal(expectedXml)
+      const info = {
+        sp: 'gaofushuai',
+        user: 'cs',
+        type: 'text',
+        text: '测试中',
+      }
+      const template = ejs.compile(tpl)
+      ctx.body = template(info)
+      ctx.status = 200
+      ctx.set('Content-Type', 'application/xml')
+    })
+    const primaryServer: any = Promise.promisifyAll(http.createServer(appPrimary.callback()))
     primaryServer.listenAsync(4000).then(() => {
-      const timestamp = Math.floor(Date.now() / 1000)
+
       const nonce = MessageHelper.generateNonce()
       const signature = MessageHelper.generateSignature('token', nonce, timestamp)
       request
@@ -158,8 +173,8 @@ describe('wechat-distributor', () => {
       })
     })
   })
-  it('should distribute to secondary clients', (done) => {
-
+  it('should distribute to secondary clients',  (done) => {
+    const timestamp = Math.floor(Date.now() / 1000)
     appSecondary.use(async (ctx) => {
       const info = {
         sp: 'gaofushuai',
@@ -167,26 +182,40 @@ describe('wechat-distributor', () => {
         type: 'text',
         text: '测试中',
       }
+      const xml = await getRawBody(ctx.req, {
+        length: ctx.length,
+        limit: '1mb',
+        encoding: 'utf8',
+      })
+      const expectedXml = `<xml>
+<ToUserName><![CDATA[jay]]></ToUserName>
+<FromUserName><![CDATA[vincent]]></FromUserName>
+<CreateTime>${timestamp}</CreateTime>
+<MsgType><![CDATA[event]]></MsgType>
+<Event><![CDATA[CLICK]]></Event>
+<EventKey><![CDATA[event_key_123]]></EventKey>
+</xml>`
       const template = ejs.compile(tpl)
       ctx.body = template(info)
       ctx.status = 200
       ctx.set('Content-Type', 'application/xml')
       expect(ctx.method).to.equal('POST')
       expect(ctx.headers['content-type']).to.match(/xml/)
+      expect(xml).to.equal(expectedXml)
       done()
+
     })
     const secondaryServer: any = Promise.promisifyAll(http.createServer(appSecondary.callback()))
     secondaryServer.listenAsync(5000).then(() => {
-      const timestamp = Math.floor(Date.now() / 1000)
+
       const nonce = MessageHelper.generateNonce()
       const signature = MessageHelper.generateSignature('token', nonce, timestamp)
       request
         .post(`/wechat?` + qs.stringify({ nonce, timestamp, signature }))
         .send(wxMsg.toXmlFormat('vincent', 'jay', timestamp))
         .set('Content-Type', 'application/xml')
-        .expect(404)
-        .expect('Content-Type', '/xml/')
+        .expect(500)
         .end(() => {})
-    })
+  })
   })
 })
