@@ -24,21 +24,27 @@ class Dispatcher {
     if (_.isEmpty(primaryClient)) {
       ctx.status = 404
     } else {
-      await this.dispatchPrimary(ctx, primaryClient)
+      await this.dispatchPrimary(ctx, primaryClient, message)
     }
-    this.dispatchSecondary(ctx, secondaryClients)
+    this.dispatchSecondary(ctx, secondaryClients, message)
   }
-  private dispatchPrimary(ctx: Koa.Context, client: Client ) {
-    this.makeRequest(ctx, client, true, Constants.PRIMARY_TIMEOUT)
+  private dispatchPrimary(ctx: Koa.Context, client: Client, message: Message) {
+    this.makeRequest(ctx, client, message, true, Constants.PRIMARY_TIMEOUT)
   }
-  private dispatchSecondary(ctx: Koa.Context, clients: Client[]) {
+  private dispatchSecondary(ctx: Koa.Context, clients: Client[], message: Message) {
     clients.forEach((client) => {
-      this.makeRequest(ctx, client, false, Constants.SECONDARY_TIMEOUT)
+      this.makeRequest(ctx, client, message, false, Constants.SECONDARY_TIMEOUT)
     })
 
   }
-  private async makeRequest(ctx: Koa.Context, client: Client, isPrimary: boolean, timeout: number) {
-    const response = ctx.req.pipe(request.post(url.resolve(client.url, ctx.search), {timeout}))
+  private async makeRequest(ctx: Koa.Context, client: Client, message: Message, isPrimary: boolean, timeout: number) {
+    const response = request.post({
+      url: url.resolve(client.url, ctx.search),
+      body: message.rawXml,
+      headers: {
+        'Content-Type': 'text/xml',
+        'Content-Length': message.rawXml.length,
+      }, timeout})
     const responseHandler = (res: http.IncomingMessage) => {
       if (res.statusCode === 200) {
         debug(`Request to ${client.url} succeeded.`)

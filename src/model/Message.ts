@@ -6,7 +6,9 @@ class Message  {
   public msgType: string
   public event?: string
   public eventKey?: string
-  constructor(originalMesage: any) {
+  public rawXml: Buffer
+  constructor(originalMesage: any, rawXml: Buffer) {
+    this.rawXml = rawXml
     for (let key in originalMesage) {
       if (originalMesage.hasOwnProperty(key)) {
         let value = originalMesage[key]

@@ -66,7 +66,7 @@ describe('ClientRouter', () => {
         Event: 'CLICK',
         EventKey: 'article_57d114fc16a64320b2b48a0f',
       }
-      const message = new Message(wxMsg)
+      const message = new Message(wxMsg, Buffer.from('rawxml', 'utf8'))
       clientRouter.getClients(message).then(([primary, secondary]) => {
         expect(primary.name).to.equal('click')
         expect(secondary).to.have.lengthOf(5)

@@ -10,10 +10,9 @@ export default class Helper {
     const timestamp = query.timestamp
     const nonce = query.nonce
 
-    const xml = await getRawBody(ctx.req, {
+    const xml: Buffer = await getRawBody(ctx.req, {
       length: ctx.length,
       limit: '1mb',
-      encoding: ctx.request.charset,
     })
     const result = await parseXML(xml)
     let formatted = formatMessage(result.xml)
@@ -30,7 +29,7 @@ export default class Helper {
       const decodedXML = await parseXML(messageWrapXml)
       formatted = formatMessage(decodedXML.xml)
     }
-    return new Message(formatted)
+    return new Message(formatted, xml)
   }
   public static getSignature(timestamp, nonce, token) {
     const shasum = crypto.createHash('sha1')
