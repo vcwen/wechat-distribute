@@ -13,7 +13,7 @@ class MessageRouter {
   constructor(wechatAccount: WechatAccount, dataSource: DataSource) {
     this.account = wechatAccount
     const clientRouter = new ClientRouter(dataSource)
-    const dispatcher = new Dispatcher(clientRouter)
+    this.dispatcher = new Dispatcher(clientRouter)
     this.cryptor = new WechatCrypto(wechatAccount.token, wechatAccount.encodingAESKey, wechatAccount.appId)
   }
   public middlewarify() {
@@ -49,7 +49,7 @@ class MessageRouter {
           }
         }
         const message = await Helper.extractWechatMessage(ctx, encrypted)
-        this.dispatcher.dispatch(ctx, message)
+        await this.dispatcher.dispatch(ctx, message)
       } else {
         ctx.throw(501, 'Not Implemented')
       }

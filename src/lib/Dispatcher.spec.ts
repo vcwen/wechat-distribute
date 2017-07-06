@@ -126,6 +126,7 @@ describe('Dispatcher', () => {
   describe('#makeRequest', () => {
     it('should be able to make primary request', (done) => {
       const ctx: any = {
+        set: () => {},
         search: '?param=search',
         set body(val) {
           expect(val).to.equal('http://main.com/click?param=search')
@@ -158,6 +159,7 @@ describe('Dispatcher', () => {
         onerror: () => {},
         req: {},
         res: {},
+        set: () => {},
       }
       ctx.req.pipe  = (url) => {
         expect(url).to.equal('http://main.com/secondary?param=search')
