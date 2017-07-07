@@ -3,9 +3,9 @@ import http = require('http')
 import * as createDebug from 'debug'
 import * as Koa from 'koa'
 import * as _ from 'lodash'
-
 import * as request from 'request'
 import {PassThrough} from 'stream'
+import * as logger from 'winston'
 import Client from '../model/Client'
 import Message from '../model/Message'
 import WechatAccount from '../model/WechatAccount'
@@ -48,13 +48,13 @@ class Dispatcher {
       }, timeout})
     const responseHandler = (res: http.IncomingMessage) => {
       if (res.statusCode === 200) {
-        debug(`Request to ${client.url} succeeded.`)
+        logger.info(`Request to ${client.url} succeeded.`)
       } else {
-         debug(`Request to ${client.url} failed with status ${res.statusCode}.` )
+         logger.error(`Request to ${client.url} failed with status ${res.statusCode}.` )
       }
     }
     const errorHandler = (err) => {
-      debug(`Request to ${client.url} failed with error ${err}.`)
+      logger.error(`Request to ${client.url} failed with error ${err}.`)
     }
     response.on('response', responseHandler)
     response.on('error', errorHandler)
