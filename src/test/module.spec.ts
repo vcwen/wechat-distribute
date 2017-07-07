@@ -173,7 +173,7 @@ describe('wechat-distributor', () => {
       })
     })
   })
-  it('should distribute to secondary clients',  (done) => {
+  it.only('should distribute to secondary clients',  (done) => {
     const timestamp = Math.floor(Date.now() / 1000)
     appSecondary.use(async (ctx) => {
       const info = {

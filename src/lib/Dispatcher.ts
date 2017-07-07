@@ -21,15 +21,16 @@ class Dispatcher {
   }
   public async dispatch(ctx: Koa.Context, message: Message) {
     const [primaryClient, secondaryClients] = await this.clientRouter.getClients(message)
+    this.dispatchSecondary(ctx, secondaryClients, message)
     if (_.isEmpty(primaryClient)) {
       ctx.status = 404
     } else {
       await this.dispatchPrimary(ctx, primaryClient, message)
     }
-    this.dispatchSecondary(ctx, secondaryClients, message)
+
   }
-  private dispatchPrimary(ctx: Koa.Context, client: Client, message: Message) {
-    this.makeRequest(ctx, client, message, true, Constants.PRIMARY_TIMEOUT)
+  private async dispatchPrimary(ctx: Koa.Context, client: Client, message: Message) {
+    await this.makeRequest(ctx, client, message, true, Constants.PRIMARY_TIMEOUT)
   }
   private dispatchSecondary(ctx: Koa.Context, clients: Client[], message: Message) {
     clients.forEach((client) => {
@@ -54,16 +55,20 @@ class Dispatcher {
     }
     const errorHandler = (err) => {
       debug(`Request to ${client.url} failed with error ${err}.`)
-      if (isPrimary) {
-        ctx.onerror.call(ctx, err)
-      }
     }
     response.on('response', responseHandler)
     response.on('error', errorHandler)
     if (isPrimary) {
-      ctx.status = 200
-      ctx.set('Content-Type', 'text/xml')
-      ctx.body = response.pipe(new PassThrough())
+      await new Promise((resolve, reject) => {
+        ctx.set('Content-Type', 'text/xml')
+        response.on('error', ctx.onerror.bind(ctx))
+        response.on('response', (res) => {
+          ctx.status = res.statusCode
+          ctx.set('Content-Type', res.headers['content-type'] ? res.headers['content-type'] : 'text/xml')
+          resolve()
+        })
+        ctx.body = response.pipe(new PassThrough())
+      })
     }
   }
 }
