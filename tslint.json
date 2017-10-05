@@ -5,6 +5,10 @@
       true,
       "never"
     ],
+    "trailing-comma": [true, {
+      "multiline": "never",
+      "singleline": "never"
+    }],
     "align": [
       true,
       "statements"
