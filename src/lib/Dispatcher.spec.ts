@@ -1,15 +1,16 @@
 import * as chai from 'chai'
-import Message from '../model/Message'
-import ClientRouter from './ClientRouter'
-import SimpleDataSource from './SimpleDataSource'
-import stream = require('stream')
 import fs = require('fs')
 import * as _ from 'lodash'
+import stream = require('stream')
+import Client from '../model/Client'
+import Message from '../model/Message'
+import ClientRouter from './ClientRouter'
 import Dispatcher from './Dispatcher'
+import SimpleDataSource from './SimpleDataSource'
 const Writable = stream.Writable
 const Readable = stream.Readable
-import * as proxyquire from 'proxyquire'
 import EventEmitter = require('events')
+import * as proxyquire from 'proxyquire'
 import * as url from 'url'
 import Constants from './constants'
 const proxyquireStrict = proxyquire.noPreserveCache()
@@ -19,26 +20,26 @@ const expect = chai.expect
 describe('Dispatcher', () => {
   const clientsObj = {
         main: {
-          url: 'http://main.com/test',
+          url: 'http://main.com/test'
         },
         secondary: {
-          url: 'http://main.com/secondary',
+          url: 'http://main.com/secondary'
         },
         textPrimary: {
-          url: 'http://main.com/textPrimary',
+          url: 'http://main.com/textPrimary'
         },
         event_secondary1: {
-          url: 'http://main.com/event_secondary1',
+          url: 'http://main.com/event_secondary1'
         },
         event_secondary2: {
-          url: 'http://main.com/event_secondary2',
+          url: 'http://main.com/event_secondary2'
         },
         datacube: {
-          url: 'http://main.com/datacube',
+          url: 'http://main.com/datacube'
         },
         click: {
-          url: 'http://main.com/click',
-        },
+          url: 'http://main.com/click'
+        }
       }
   describe('#constructor', () => {
     it('should  create Dispatcher', () => {
@@ -59,7 +60,7 @@ describe('Dispatcher', () => {
       (dispatcher as any).clientRouter = {
         async getClients(message) {
           return ['http://main.com/click', secondaryUrls]
-        },
+        }
       };
       (dispatcher as any).dispatchPrimary = async (ctx, client, message) => {
         expect(client).to.equal('http://main.com/click')
@@ -80,7 +81,7 @@ describe('Dispatcher', () => {
       (dispatcher as any).clientRouter = {
         async getClients(message) {
           return ['', secondaryUrls]
-        },
+        }
       };
       (dispatcher as any).dispatchPrimary = async (ctx, client) => {
         expect(client).to.equal('http://main.com/click')
@@ -92,12 +93,24 @@ describe('Dispatcher', () => {
       const context: any = {
         set status(val) {
           expect(val).to.equal(404)
-        },
+        }
       }
       dispatcher.dispatch(context, {} as any)
     })
   })
   describe('#dispatchPrimary', () => {
+    it('should call makeRequest with correct params', () => {
+      const dispatcher: any = new Dispatcher({} as any)
+      const context: any = {};
+      (dispatcher as any).makeRequest =  (ctx, client, message, isPrimary, timeout) => {
+        expect(ctx).to.equal(context)
+        expect(client).to.equal('primary')
+        expect(message.rawXml.toString()).to.equal('<xml>buffer</xml>')
+        expect(isPrimary).to.equal(true)
+        expect(timeout).to.equal(Constants.PRIMARY_TIMEOUT)
+      }
+      dispatcher.dispatchPrimary(context, 'primary', {rawXml: Buffer.from('<xml>buffer</xml>', 'utf8')})
+    })
     it('should call makeRequest with correct params', () => {
       const dispatcher: any = new Dispatcher({} as any)
       const context: any = {};
@@ -124,84 +137,6 @@ describe('Dispatcher', () => {
       }
       dispatcher.dispatchSecondary(context, ['secondaryUrl_1', 'secondaryUrl_2'],
         {rawXml: Buffer.from('<xml>buffer</xml>', 'utf8')})
-    })
-  })
-  describe('#makeRequest', () => {
-    it('should be able to make primary request', (done) => {
-      const ctx: any = {
-        set: () => {},
-        search: '?param=search',
-        set body(val) {
-          expect(val).to.equal('http://main.com/click?param=search')
-          done()
-        },
-        onerror: () => {},
-        res: {},
-      }
-      const requestStub = {
-        post: (options) => {
-          return {
-          on: (event) => {},
-          pipe: () => {
-            return options.url
-          },
-        }
-        },
-      }
-      const Dispatcher = proxyquireStrict('./Dispatcher', {request: requestStub}).default
-      const dispatcher: any = new Dispatcher({} as any)
-      dispatcher.makeRequest(ctx, {url: 'http://main.com/click'},
-        {rawXml: Buffer.from('<xml></xml>', 'utf8')}, true, 2000)
-    })
-    it('should be able to make secondary request', (done) => {
-      const ctx: any = {
-        search: '?param=search',
-        onerror: () => {},
-        req: {},
-        res: {},
-        set: () => {},
-      }
-      const requestStub = {
-        post: (options) => {
-          expect(options.url).to.equal('http://main.com/secondary?param=search')
-          done()
-          return {
-          on: (event) => {},
-        }
-        },
-      }
-      const Dispatcher = proxyquireStrict('./Dispatcher', {request: requestStub}).default
-      const dispatcher: any = new Dispatcher({} as any)
-      dispatcher.makeRequest(ctx, {url: 'http://main.com/secondary'},
-        {rawXml: Buffer.from('<xml>buffer</xml>', 'utf8')}, false, 2000)
-    })
-    it('should handle the error when error occurs in primary request', (done) => {
-      const ctx: any = {
-        onerror: (err) => {
-          expect(err).to.be.instanceof(Error)
-          done()
-        },
-        set: () => {},
-        search: '?param=search',
-        req: {},
-        res: {},
-      }
-      const requestStub = {
-        post: (options) => {
-          const fakeRequest = new FakeRequestExec()
-          setTimeout(() => {
-          fakeRequest.emit('error', new Error('something wrong.'))
-        }, 100);
-          (fakeRequest as any).pipe = () => {
-          return 'body'
-        }
-          return fakeRequest
-        },
-      }
-      const Dispatcher = proxyquireStrict('./Dispatcher', {request: requestStub}).default
-      const dispatcher: any = new Dispatcher({} as any)
-      dispatcher.makeRequest(ctx, {url: 'http://main.com/click'},
-        {rawXml: Buffer.from('<xml></xml>', 'utf8')}, true, 2000)
     })
   })
 })
