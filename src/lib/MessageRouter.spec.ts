@@ -1,21 +1,21 @@
 import * as chai from 'chai'
+import * as fs from 'fs'
 import * as Koa from 'koa'
+import * as _ from 'lodash'
+import stream = require('stream')
 import * as WechatCrypto from 'wechat-crypto'
 import Message from '../model/Message'
 import WechatAccount from '../model/WechatAccount'
 import ClientRouter from './ClientRouter'
 import DataSource from './DataSource'
+import Dispatcher from './Dispatcher'
 import Helper from './Helper'
 import MessageRouter from './MessageRouter'
 import SimpleDataSource from './SimpleDataSource'
-import stream = require('stream')
-import fs = require('fs')
-import * as _ from 'lodash'
-import Dispatcher from './Dispatcher'
 const Writable = stream.Writable
 const Readable = stream.Readable
-import * as proxyquire from 'proxyquire'
 import EventEmitter = require('events')
+import * as proxyquire from 'proxyquire'
 import * as url from 'url'
 import Constants from './constants'
 const proxyquireStrict = proxyquire.noCallThru()
@@ -38,8 +38,8 @@ describe('MessageRouter', () => {
         default: {
           getSignature() {
             return 'unencrypted_signature'
-          },
-        },
+          }
+        }
       }
       const IMessageRouter = proxyquireStrict('./MessageRouter',
         {'wechat-crypto': WechatCryptoStub, './Helper': HelperStub}).default
@@ -52,12 +52,12 @@ describe('MessageRouter', () => {
           timestamp: 1499158830,
           nonce: 'nonce',
           echostr: 'echoecho',
-          signature: 'unencrypted_signature',
+          signature: 'unencrypted_signature'
         },
         set body(val) {
           expect(val).to.equal('echoecho')
           done()
-        },
+        }
       }
       router.middlewarify()(context as any)
     })
@@ -69,15 +69,15 @@ describe('MessageRouter', () => {
           },
           decrypt(echostr) {
             return {message: echostr}
-          },
+          }
         }
       }
       const HelperStub = {
         default: {
           getSignature() {
             return 'unencrypted_signature'
-          },
-        },
+          }
+        }
       }
       const IMessageRouter = proxyquireStrict('./MessageRouter',
         {'wechat-crypto': WechatCryptoStub, './Helper': HelperStub}).default
@@ -91,12 +91,12 @@ describe('MessageRouter', () => {
           nonce: 'nonce',
           echostr: 'echoecho',
           msg_signature: '1499158830nonceechoecho',
-          encrypt_type: 'aes',
+          encrypt_type: 'aes'
         },
         set body(val) {
           expect(val).to.equal('echoecho')
           done()
-        },
+        }
       }
       router.middlewarify()(context as any)
     })
@@ -108,15 +108,15 @@ describe('MessageRouter', () => {
           },
           decrypt(echostr) {
             return {message: echostr}
-          },
+          }
         }
       }
       const HelperStub = {
         default: {
           getSignature() {
             return 'unencrypted_signature'
-          },
-        },
+          }
+        }
       }
       const IMessageRouter = proxyquireStrict('./MessageRouter',
         {'wechat-crypto': WechatCryptoStub, './Helper': HelperStub}).default
@@ -130,12 +130,12 @@ describe('MessageRouter', () => {
           nonce: 'nonce',
           echostr: 'echoecho',
           msg_signature: '1499158830nonceechoecho',
-          encrypt_type: 'aes',
+          encrypt_type: 'aes'
         },
         throw(code, msg) {
           expect(code).to.equal(401)
           done()
-        },
+        }
       }
       router.middlewarify()(context as any)
     })
@@ -147,15 +147,15 @@ describe('MessageRouter', () => {
           },
           decrypt(echostr) {
             return {message: echostr}
-          },
+          }
         }
       }
       const HelperStub = {
         default: {
           getSignature() {
             return 'unencrypted_signature'
-          },
-        },
+          }
+        }
       }
       const IMessageRouter = proxyquireStrict('./MessageRouter',
         {'wechat-crypto': WechatCryptoStub, './Helper': HelperStub}).default
@@ -168,12 +168,12 @@ describe('MessageRouter', () => {
           timestamp: 1499158830,
           nonce: 'nonce',
           echostr: 'echoecho',
-          signature: '1499158830nonceechoecho',
+          signature: '1499158830nonceechoecho'
         },
         throw(code, msg) {
           expect(code).to.equal(401)
           done()
-        },
+        }
       }
       router.middlewarify()(context as any)
     })
@@ -185,7 +185,7 @@ describe('MessageRouter', () => {
           },
           decrypt(echostr) {
             return {message: echostr}
-          },
+          }
         }
       }
       const HelperStub = {
@@ -195,8 +195,8 @@ describe('MessageRouter', () => {
           },
           async extractWechatMessage(ctx, encrypted) {
             return {type: 'event', eventKey: 'event_key'}
-          },
-        },
+          }
+        }
       }
       const IMessageRouter = proxyquireStrict('./MessageRouter',
         {'wechat-crypto': WechatCryptoStub, './Helper': HelperStub}).default
@@ -207,7 +207,7 @@ describe('MessageRouter', () => {
         dispatch(ctx, message) {
           expect(message).to.deep.equal({type: 'event', eventKey: 'event_key'})
           done()
-        },
+        }
       }
       const context = {
         method: 'POST',
@@ -215,8 +215,8 @@ describe('MessageRouter', () => {
           timestamp: 1499158830,
           nonce: 'nonce',
           echostr: 'echoecho',
-          signature: 'unencrypted_signature',
-        },
+          signature: 'unencrypted_signature'
+        }
       }
       router.middlewarify()(context as any)
     })
@@ -228,7 +228,7 @@ describe('MessageRouter', () => {
           },
           decrypt(echostr) {
             return {message: echostr}
-          },
+          }
         }
       }
       const HelperStub = {
@@ -238,8 +238,8 @@ describe('MessageRouter', () => {
           },
           async extractWechatMessage(ctx, encrypted) {
             return {type: 'event', eventKey: 'event_key'}
-          },
-        },
+          }
+        }
       }
       const IMessageRouter = proxyquireStrict('./MessageRouter',
         {'wechat-crypto': WechatCryptoStub, './Helper': HelperStub}).default
@@ -252,12 +252,12 @@ describe('MessageRouter', () => {
           timestamp: 1499158830,
           nonce: 'nonce',
           echostr: 'echoecho',
-          signature: 'unencrypted_signature',
+          signature: 'unencrypted_signature'
         },
         throw(code, msg) {
           expect(code).to.equal(501)
           done()
-        },
+        }
       }
       router.middlewarify()(context as any)
     })

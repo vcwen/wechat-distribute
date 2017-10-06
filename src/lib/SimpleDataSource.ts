@@ -1,4 +1,3 @@
-import * as Promise from 'bluebird'
 import * as _ from 'lodash'
 import Client from '../model/Client'
 import Route from '../model/Route'
@@ -13,24 +12,24 @@ class SimpleDataSource extends DataSource {
     this.routes = Object.assign({}, routes)
     this.clients = Object.assign({}, clients)
   }
-  public getClient(name: string): Promise<Client> {
-    const client: any = _.get(this.clients, name)
-    if (_.isEmpty(client)) {
-      return Promise.resolve(null)
-    } else {
-      return Promise.resolve(new Client(name, client.url))
+  public  async getRoutes() {
+    return this.routes
+  }
+  public async getClient(name: string) {
+    const url = _.get<any, string>(this.clients, name)
+    if (url) {
+      return new Client(name , url)
     }
-
   }
-  public getClients(...names: string[]): Promise<Client[]> {
+  public async getClients(...names: string[]) {
     const clients = _.map(names, (name) => {
-      const c: any = _.get(this.clients, name)
-      return new Client(name, c.url)
+      const url = _.get<any, string>(this.clients, name)
+      return new Client(name, url)
     })
-    return Promise.resolve(clients)
+    return clients
   }
-  public getRootRoute(): Promise<Route> {
-    return Promise.resolve(this.loadRootRoute(this.routes))
+  public async getRootRoute() {
+    return this.loadRootRoute(this.routes)
   }
 }
 

@@ -71,7 +71,7 @@ const tpl = [
     '<% if (user === "web") { %>',
       'webwx_msg_cli_ver_0x1',
     '<% } %>',
-  '</xml>',
+  '</xml>'
 ].join('')
 
 const router = new Router()
@@ -81,41 +81,27 @@ const routesObj: any = {
   secondary: ['secondary'],
   specs: {
     text: {
-      primary: 'textPrimary',
+      primary: 'textPrimary'
     },
     event: {
       secondary: ['event_secondary1', 'event_secondary2'],
       specs: {
         click: {
           primary: 'click',
-          secondary: 'datacube',
-        },
-      },
-    },
-  },
+          secondary: 'datacube'
+        }
+      }
+    }
+  }
 }
 const clientsObj = {
-  main: {
-    url: 'http://main.com/test',
-  },
-  secondary: {
-    url: 'http://main.com/secondary',
-  },
-  textPrimary: {
-    url: 'http://main.com/textPrimary',
-  },
-  event_secondary1: {
-    url: 'http://main.com/event_secondary1',
-  },
-  event_secondary2: {
-    url: 'http://main.com/event_secondary2',
-  },
-  datacube: {
-    url: 'http://localhost:5000/click',
-  },
-  click: {
-    url: 'http://localhost:4000/click',
-  },
+  main: 'http://main.com/test',
+  secondary: 'http://main.com/secondary',
+  textPrimary: 'http://main.com/textPrimary',
+  event_secondary1: 'http://main.com/event_secondary1',
+  event_secondary2: 'http://main.com/event_secondary2',
+  datacube: 'http://localhost:5000/click',
+  click: 'http://localhost:4000/click'
 }
 const datasource = new SimpleDataSource(routesObj, clientsObj)
 const messageRouter = new MessageRouter(account, datasource)
@@ -139,14 +125,14 @@ describe('wechat-distributor', () => {
       const xml: string = await getRawBody(ctx.req, {
         length: ctx.length,
         limit: '1mb',
-        encoding: 'utf8',
+        encoding: 'utf8'
       })
       expect(xml).to.equal(expectedXml)
       const info = {
         sp: 'gaofushuai',
         user: 'cs',
         type: 'text',
-        text: '测试中',
+        text: '测试中'
       }
       const template = ejs.compile(tpl)
       ctx.body = template(info)
@@ -165,6 +151,7 @@ describe('wechat-distributor', () => {
       .expect(200)
       .end((err, res) => {
         if (err) {
+          console.log(err)
           throw err
         }
         primaryServer.close()
@@ -180,12 +167,12 @@ describe('wechat-distributor', () => {
         sp: 'gaofushuai',
         user: 'cs',
         type: 'text',
-        text: '测试中',
+        text: '测试中'
       }
       const xml = await getRawBody(ctx.req, {
         length: ctx.length,
         limit: '1mb',
-        encoding: 'utf8',
+        encoding: 'utf8'
       })
       const expectedXml = `<xml>
 <ToUserName><![CDATA[jay]]></ToUserName>

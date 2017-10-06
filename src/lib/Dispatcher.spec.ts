@@ -69,8 +69,8 @@ describe('Dispatcher', () => {
         expect(clients).to.equal(secondaryUrls)
         done()
       }
-      const ctx: any = {}
-      dispatcher.dispatch(ctx, {} as any)
+      const context: any = {}
+      dispatcher.dispatch(context, {} as any)
     })
     it('should return 404 when primary is not present', (done) => {
       const dispatcher = new Dispatcher({} as any)
@@ -112,6 +112,8 @@ describe('Dispatcher', () => {
       dispatcher.dispatchPrimary(context, 'primary', {rawXml: Buffer.from('<xml>buffer</xml>', 'utf8')})
     })
     it('should call makeRequest with correct params', () => {
+      const client = new Client('primay', 'http://primary.com/primary')
+      const clientRouter = new ClientRouter(new SimpleDataSource({}, {}))
       const dispatcher: any = new Dispatcher({} as any)
       const context: any = {};
       (dispatcher as any).makeRequest =  (ctx, client, message, isPrimary, timeout) => {

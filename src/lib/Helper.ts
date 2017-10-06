@@ -12,7 +12,7 @@ export default class Helper {
 
     const xml: Buffer = await getRawBody(ctx.req, {
       length: ctx.length,
-      limit: '1mb',
+      limit: '1mb'
     })
     const result = await parseXML(xml)
     let formatted = formatMessage(result.xml)
