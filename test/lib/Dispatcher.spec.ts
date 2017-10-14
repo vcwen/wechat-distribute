@@ -1,5 +1,5 @@
 import * as _ from 'lodash'
-import Constants from '../../src/lib/constants'
+import Constants from '../../src/lib/Constants'
 import Dispatcher from '../../src/lib/Dispatcher'
 
 describe('Dispatcher', () => {
