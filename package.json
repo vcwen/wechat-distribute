@@ -15,7 +15,10 @@
     "testRegex": "test/.*\\.(test|spec)\\.(jsx?|tsx?)$",
     "testEnvironment": "node",
     "collectCoverage": true,
-    "coveragePathIgnorePatterns" : ["/node_modules/", "/test/"],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/test/"
+    ],
     "coverageThreshold": {
       "global": {
         "branches": 50,
@@ -62,6 +65,7 @@
     "@types/lodash": "^4.14.55",
     "@types/node": "^7.0.33",
     "co-wechat": "^2.3.0",
+    "coveralls": "^3.0.0",
     "ejs": "^2.5.6",
     "jest": "^21.2.1",
     "koa": "^2.3.0",
