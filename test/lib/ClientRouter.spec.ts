@@ -1,8 +1,6 @@
-import * as chai from 'chai'
-import Message from '../model/Message'
-import ClientRouter from './ClientRouter'
-import SimpleDataSource from './SimpleDataSource'
-const expect = chai.expect
+import ClientRouter from '../../src/lib/ClientRouter'
+import SimpleDataSource from '../../src/lib/SimpleDataSource'
+import Message from '../../src/model/Message'
 
 describe('ClientRouter', () => {
   const routesObj: any = {
@@ -36,7 +34,7 @@ describe('ClientRouter', () => {
     it('should  create ClientRouter', () => {
       const simpleDs = new SimpleDataSource(routesObj, clientsObj)
       const clientRouter = new ClientRouter(simpleDs)
-      expect(clientRouter).to.be.instanceof(ClientRouter)
+      expect(clientRouter).toBeInstanceOf(ClientRouter)
     })
   })
 
@@ -54,10 +52,10 @@ describe('ClientRouter', () => {
       }
       const message = new Message(wxMsg, Buffer.from('rawxml', 'utf8'))
       const [primary, secondary] = await clientRouter.getClients(message)
-      expect(primary.name).to.equal('click')
-      expect(secondary).to.have.lengthOf(5)
-      expect(secondary.map((item) => item.name)).to.deep
-          .equal([ 'secondary', 'main', 'event_secondary1', 'event_secondary2', 'datacube' ])
+      expect(primary.name).toEqual('click')
+      expect(secondary).toHaveLength(5)
+      expect(secondary.map((item) => item.name))
+      .toEqual([ 'secondary', 'main', 'event_secondary1', 'event_secondary2', 'datacube' ])
 
     })
   })

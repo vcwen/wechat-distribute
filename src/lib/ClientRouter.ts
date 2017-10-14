@@ -4,12 +4,13 @@ import Message from '../model/Message'
 import Route from '../model/Route'
 import DataSource from './DataSource'
 
-function getTargetClients(route: Route, ...phases: string[]): [string, string[]] {
+function getTargetClients(route: Route, ...phases: string[]): [string | undefined, string[]] {
   const [phase, ...left] = phases
   let primary = route.primary
   let secondary = route.secondary
-  if (phase && !_.isEmpty(route.specs.get(phase))) {
-    const [subPrimary, subSecondary] = getTargetClients(route.specs.get(phase), ...left)
+  const subRoute = route.specs.get(phase)
+  if (phase && subRoute) {
+    const [subPrimary, subSecondary] = getTargetClients(subRoute, ...left)
     if (subPrimary) {
       if (primary) {
         secondary.push(primary)
@@ -31,15 +32,17 @@ class ClientRouter {
   }
 
   public async getClients(message: Message) {
-     const phases: string[] = message.msgType === 'event' ?
-       [message.msgType, message.event] : [message.msgType]
+     const phases = message.getPhases()
      const rootRoute: Route = await this.dataSource.getRootRoute()
      let [primary, secondary] = await getTargetClients(rootRoute, ...phases)
      secondary = _.uniq(secondary)
      secondary = _.filter(secondary, (c) => c !== primary)
-     const primaryClient = await this.dataSource.getClient(primary)
+     let primaryClient: Client | undefined
+     if (primary) {
+      primaryClient = await this.dataSource.getClient(primary)
+     }
      const secondaryClients = await this.dataSource.getClients(...secondary)
-     return [primaryClient, secondaryClients] as [Client, Client[]]
+     return [primaryClient, secondaryClients] as [Client | undefined, Client[]]
   }
 }
 

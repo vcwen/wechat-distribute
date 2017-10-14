@@ -20,6 +20,13 @@ class Message  {
       }
     }
   }
+  public getPhases() {
+    if (this.event) {
+      return [this.msgType, this.event as string]
+    } else {
+      return [this.msgType]
+    }
+  }
 }
 
 export default Message

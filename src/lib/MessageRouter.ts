@@ -48,6 +48,7 @@ class MessageRouter {
             return ctx.throw(401, 'Invalid signature')
           }
         }
+
         const message = await Helper.extractWechatMessage(ctx, this.cryptor)
         await this.dispatcher.dispatch(ctx, message)
       } else {

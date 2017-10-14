@@ -1,21 +1,6 @@
-import * as chai from 'chai'
-import fs = require('fs')
 import * as _ from 'lodash'
-import stream = require('stream')
-import Client from '../model/Client'
-import Message from '../model/Message'
-import ClientRouter from './ClientRouter'
-import Dispatcher from './Dispatcher'
-import SimpleDataSource from './SimpleDataSource'
-const Writable = stream.Writable
-const Readable = stream.Readable
-import EventEmitter = require('events')
-import * as proxyquire from 'proxyquire'
-import * as url from 'url'
-import Constants from './constants'
-const proxyquireStrict = proxyquire.noPreserveCache()
-class FakeRequestExec extends EventEmitter {}
-const expect = chai.expect
+import Constants from '../../src/lib/constants'
+import Dispatcher from '../../src/lib/Dispatcher'
 
 describe('Dispatcher', () => {
   const clientsObj = {
@@ -44,29 +29,27 @@ describe('Dispatcher', () => {
   describe('#constructor', () => {
     it('should  create Dispatcher', () => {
       const dispatcher = new Dispatcher({} as any)
-      expect(dispatcher).to.be.instanceof(Dispatcher)
+      expect(dispatcher).toBeInstanceOf(Dispatcher)
     })
   })
 
   describe('#dispatch', () => {
     it('should dispatch message to target primary and secondary clients', (done) => {
-
-      const targetUrls = _.map(clientsObj, (item) => item.url)
       const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
         return item.indexOf('click') === -1
       })
 
       const dispatcher: Dispatcher = new Dispatcher({} as any);
       (dispatcher as any).clientRouter = {
-        async getClients(message) {
+        async getClients() {
           return ['http://main.com/click', secondaryUrls]
         }
       };
-      (dispatcher as any).dispatchPrimary = async (ctx, client, message) => {
-        expect(client).to.equal('http://main.com/click')
+      (dispatcher as any).dispatchPrimary = async (_1, client) => {
+        expect(client).toEqual('http://main.com/click')
       }
-      (dispatcher as any).dispatchSecondary = async (ctx, clients, message) => {
-        expect(clients).to.equal(secondaryUrls)
+      (dispatcher as any).dispatchSecondary = async (_1, clients) => {
+        expect(clients).toEqual(secondaryUrls)
         done()
       }
       const context: any = {}
@@ -74,25 +57,24 @@ describe('Dispatcher', () => {
     })
     it('should return 404 when primary is not present', (done) => {
       const dispatcher = new Dispatcher({} as any)
-      const targetUrls = _.map(clientsObj, (item) => item.url)
       const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
         return item.indexOf('click') === -1
       });
       (dispatcher as any).clientRouter = {
-        async getClients(message) {
+        async getClients() {
           return ['', secondaryUrls]
         }
       };
-      (dispatcher as any).dispatchPrimary = async (ctx, client) => {
-        expect(client).to.equal('http://main.com/click')
+      (dispatcher as any).dispatchPrimary = async (_1, client) => {
+        expect(client).toEqual('http://main.com/click')
       }
-      (dispatcher as any).dispatchSecondary = async (ctx, clients) => {
-        expect(clients).to.equal(secondaryUrls)
+      (dispatcher as any).dispatchSecondary = async (_1, clients) => {
+        expect(clients).toEqual(secondaryUrls)
         done()
       }
       const context: any = {
         set status(val) {
-          expect(val).to.equal(404)
+          expect(val).toEqual(404)
         }
       }
       dispatcher.dispatch(context, {} as any)
@@ -103,25 +85,23 @@ describe('Dispatcher', () => {
       const dispatcher: any = new Dispatcher({} as any)
       const context: any = {};
       (dispatcher as any).makeRequest =  (ctx, client, message, isPrimary, timeout) => {
-        expect(ctx).to.equal(context)
-        expect(client).to.equal('primary')
-        expect(message.rawXml.toString()).to.equal('<xml>buffer</xml>')
-        expect(isPrimary).to.equal(true)
-        expect(timeout).to.equal(Constants.PRIMARY_TIMEOUT)
+        expect(ctx).toEqual(context)
+        expect(client).toEqual('primary')
+        expect(message.rawXml.toString()).toEqual('<xml>buffer</xml>')
+        expect(isPrimary).toEqual(true)
+        expect(timeout).toEqual(Constants.PRIMARY_TIMEOUT)
       }
       dispatcher.dispatchPrimary(context, 'primary', {rawXml: Buffer.from('<xml>buffer</xml>', 'utf8')})
     })
     it('should call makeRequest with correct params', () => {
-      const client = new Client('primay', 'http://primary.com/primary')
-      const clientRouter = new ClientRouter(new SimpleDataSource({}, {}))
       const dispatcher: any = new Dispatcher({} as any)
       const context: any = {};
       (dispatcher as any).makeRequest =  (ctx, client, message, isPrimary, timeout) => {
-        expect(ctx).to.equal(context)
-        expect(client).to.equal('primary')
-        expect(message.rawXml.toString()).to.equal('<xml>buffer</xml>')
-        expect(isPrimary).to.equal(true)
-        expect(timeout).to.equal(Constants.PRIMARY_TIMEOUT)
+        expect(ctx).toEqual(context)
+        expect(client).toEqual('primary')
+        expect(message.rawXml.toString()).toEqual('<xml>buffer</xml>')
+        expect(isPrimary).toEqual(true)
+        expect(timeout).toEqual(Constants.PRIMARY_TIMEOUT)
       }
       dispatcher.dispatchPrimary(context, 'primary', {rawXml: Buffer.from('<xml>buffer</xml>', 'utf8')})
     })
@@ -131,11 +111,11 @@ describe('Dispatcher', () => {
       const dispatcher: any = new Dispatcher({} as any)
       const context: any = {};
       (dispatcher as any).makeRequest =  (ctx, client, message, isPrimary, timeout) => {
-        expect(ctx).to.equal(context)
-        expect(client).to.be.oneOf(['secondaryUrl_1', 'secondaryUrl_2'])
-        expect(message.rawXml.toString()).to.equal('<xml>buffer</xml>')
-        expect(isPrimary).to.equal(false)
-        expect(timeout).to.equal(Constants.SECONDARY_TIMEOUT)
+        expect(ctx).toEqual(context)
+        expect(client).toMatch(/secondaryUrl/)
+        expect(message.rawXml.toString()).toEqual('<xml>buffer</xml>')
+        expect(isPrimary).toEqual(false)
+        expect(timeout).toEqual(Constants.SECONDARY_TIMEOUT)
       }
       dispatcher.dispatchSecondary(context, ['secondaryUrl_1', 'secondaryUrl_2'],
         {rawXml: Buffer.from('<xml>buffer</xml>', 'utf8')})

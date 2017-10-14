@@ -5,8 +5,32 @@
   "main": "./dist/main.js",
   "types": "./dist/main.d.ts",
   "scripts": {
-    "pretest": "rm -rf dist/ && tsc",
-    "test": "istanbul cover _mocha -- -R spec 'dist/**/*.spec.js'"
+    "test": "jest",
+    "coveralls": "jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.tsx?$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "test/.*\\.(test|spec)\\.(jsx?|tsx?)$",
+    "testEnvironment": "node",
+    "collectCoverage": true,
+    "coveragePathIgnorePatterns" : ["/node_modules/", "/test/"],
+    "coverageThreshold": {
+      "global": {
+        "branches": 50,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    },
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json"
+    ]
   },
   "repository": {
     "type": "git",
@@ -19,13 +43,9 @@
   },
   "homepage": "https://github.com/wenwei1202/wechat-distribute#readme",
   "dependencies": {
-    "@types/axios": "^0.14.0",
-    "@types/bluebird": "^3.5.8",
     "axios": "^0.16.2",
-    "bluebird": "^3.5.0",
     "camelcase": "^4.0.0",
     "debug": "^2.6.3",
-    "express-xml-bodyparser": "^0.3.0",
     "lodash": "^4.17.4",
     "moment": "^2.17.1",
     "raw-body": "^2.2.0",
@@ -33,23 +53,23 @@
     "winston": "^2.3.1"
   },
   "engines": {
-    "node": ">=6.0"
+    "node": ">=8.0"
   },
   "devDependencies": {
-    "@types/chai": "^3.4.35",
+    "@types/axios": "^0.14.0",
+    "@types/jest": "^21.1.2",
     "@types/koa": "^2.0.39",
     "@types/lodash": "^4.14.55",
-    "@types/mocha": "^2.2.40",
     "@types/node": "^7.0.33",
-    "@types/proxyquire": "^1.3.27",
-    "chai": "^3.5.0",
+    "co-wechat": "^2.3.0",
     "ejs": "^2.5.6",
-    "istanbul": "^1.1.0-alpha.1",
+    "jest": "^21.2.1",
     "koa": "^2.3.0",
     "koa-router": "^7.2.1",
-    "mocha": "^3.2.0",
-    "proxyquire": "^1.7.11",
+    "nyc": "^11.2.1",
     "supertest": "^3.0.0",
-    "wechat-message-mock": "0.0.4"
+    "ts-jest": "^21.1.0",
+    "typescript": "^2.5.3",
+    "wechat-message-mock": "^0.0.9"
   }
 }

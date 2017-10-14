@@ -1,6 +1,4 @@
-import * as chai from 'chai'
-import SimpleDataSource from './SimpleDataSource'
-const expect = chai.expect
+import SimpleDataSource from '../../src/lib/SimpleDataSource'
 
 describe('SimpleDataSource', () => {
   const routesObj: any = {
@@ -30,7 +28,7 @@ describe('SimpleDataSource', () => {
   describe('#constructor', () => {
     it('should  create SimpleDataSource', () => {
       const simpleDs = new SimpleDataSource(routesObj, clientsObj)
-      expect(simpleDs).to.be.instanceof(SimpleDataSource)
+      expect(simpleDs).toBeInstanceOf(SimpleDataSource)
     })
   })
 
@@ -38,19 +36,19 @@ describe('SimpleDataSource', () => {
     it('should return client promise', async () => {
       const simpleDs = new SimpleDataSource(routesObj, clientsObj)
       const client = await simpleDs.getClient('main')
-      expect(client.name).to.equal('main')
-      expect(client.url).to.equal(clientsObj.main)
+      expect(client.name).toBe('main')
+      expect(client.url).toBe(clientsObj.main)
     })
 
     it('should return empty promise if name is empty string or null', async () => {
       const simpleDs = new SimpleDataSource(routesObj, clientsObj)
       const client = await simpleDs.getClient(null)
-      expect(client).to.be.undefined
+      expect(client).toBeUndefined()
     })
     it('should return empty promise if client not exists', async () => {
       const simpleDs = new SimpleDataSource(routesObj, clientsObj)
       const client = await simpleDs.getClient('main1')
-      expect(client).to.be.undefined
+      expect(client).toBeUndefined()
     })
   })
 
@@ -58,11 +56,11 @@ describe('SimpleDataSource', () => {
     it('should return clients', async () => {
       const simpleDs = new SimpleDataSource(routesObj, clientsObj)
       const clients = await simpleDs.getClients('main', 'datacube')
-      expect(clients).to.have.lengthOf(2)
-      expect(clients[0].name).to.equal('main')
-      expect(clients[0].url).to.equal(clientsObj.main)
-      expect(clients[1].name).to.equal('datacube')
-      expect(clients[1].url).to.equal(clientsObj.datacube)
+      expect(clients).toHaveLength(2)
+      expect(clients[0].name).toBe('main')
+      expect(clients[0].url).toBe(clientsObj.main)
+      expect(clients[1].name).toBe('datacube')
+      expect(clients[1].url).toBe(clientsObj.datacube)
     })
   })
 
@@ -70,17 +68,17 @@ describe('SimpleDataSource', () => {
     it('should return root route ', async () => {
       const simpleDs = new SimpleDataSource(routesObj, clientsObj)
       const rootRoute = await simpleDs.getRootRoute()
-      expect(rootRoute.primary).to.equal('main')
-      expect(rootRoute.secondary).to.have.lengthOf(1)
-      expect(rootRoute.secondary[0]).to.equal('secondary')
+      expect(rootRoute.primary).toBe('main')
+      expect(rootRoute.secondary).toHaveLength(1)
+      expect(rootRoute.secondary[0]).toEqual('secondary')
       const textRoute = rootRoute.specs.get('text')
-      expect(textRoute.primary).to.equal('textPrimary')
-      expect(textRoute.secondary).to.be.empty
+      expect(textRoute.primary).toBe('textPrimary')
+      expect(textRoute.secondary).toEqual([])
       const eventRoute = rootRoute.specs.get('event')
-      expect(eventRoute.primary).to.be.undefined
-      expect(eventRoute.secondary).to.be.deep.equal(['event_secondary1', 'event_secondary2'])
+      expect(eventRoute.primary).toBeUndefined()
+      expect(eventRoute.secondary).toEqual(['event_secondary1', 'event_secondary2'])
       const clickRoute = eventRoute.specs.get('click')
-      expect(clickRoute.secondary).to.deep.equal(['datacube'])
+      expect(clickRoute.secondary).toEqual(['datacube'])
     })
   })
 })

@@ -37,6 +37,9 @@ export default class Helper {
     shasum.update(arr.join(''))
     return shasum.digest('hex')
   }
+  public static async parseMessageXml(xml: string) {
+    return formatMessage((await parseXML(xml)).xml)
+  }
 }
 
 function parseXML(xml): any {

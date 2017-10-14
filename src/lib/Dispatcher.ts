@@ -1,18 +1,11 @@
 import axios from 'axios'
-import * as createDebug from 'debug'
-import * as http from 'http'
 import * as Koa from 'koa'
-import * as _ from 'lodash'
-import {PassThrough} from 'stream'
 import * as url from 'url'
 import * as logger from 'winston'
 import Client from '../model/Client'
 import Message from '../model/Message'
-import WechatAccount from '../model/WechatAccount'
 import ClientRouter from './ClientRouter'
-import Constants from './constants'
-
-const debug = createDebug('wechat-distribute')
+import Constants from './Constants'
 
 class Dispatcher {
   private clientRouter: ClientRouter
@@ -22,7 +15,7 @@ class Dispatcher {
   public async dispatch(ctx: Koa.Context, message: Message) {
     const [primaryClient, secondaryClients] = await this.clientRouter.getClients(message)
     this.dispatchSecondary(ctx, secondaryClients, message)
-    if (_.isEmpty(primaryClient)) {
+    if (!primaryClient) {
       ctx.status = 404
     } else {
       await this.dispatchPrimary(ctx, primaryClient, message)
@@ -50,13 +43,15 @@ class Dispatcher {
       })
       if (isPrimary) {
         ctx.status = response.status
-        ctx.set('Content-Type', response.headers['content-type'] ? response.headers['content-type'] : 'text/xml')
+        ctx.set('Content-Type', 'text/xml')
         ctx.body = response.data
       }
       logger.info(`Distribute request to ${client.url}`)
     } catch (err) {
       logger.error(`Distribute to ${client.url} failed with error: ${err.message}.`)
-      ctx.status = 500
+      if (isPrimary) {
+        ctx.status = 500
+      }
     }
   }
 }

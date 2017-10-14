@@ -1,9 +1,8 @@
 import * as _ from 'lodash'
 import Client from '../model/Client'
 import Route from '../model/Route'
-import WechatAccount from '../model/WechatAccount'
 abstract class DataSource {
-  public abstract async getClient(name: string): Promise<Client>
+  public abstract async getClient(name: string): Promise<Client | undefined>
   public abstract async getClients(...names: string[]): Promise<Client[]>
   public abstract async getRoutes()
   public abstract async getRootRoute()

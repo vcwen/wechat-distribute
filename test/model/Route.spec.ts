@@ -1,27 +1,25 @@
-import * as chai from 'chai'
-import Route from './Route'
-const expect = chai.expect
+import Route from '../../src/model/Route'
 
 describe('Route', () => {
   describe('#constructor', () => {
     it('should create Route', () => {
       const specs = new Map<string, Route>()
       const route = new Route('primary', ['secondary1', 'secondary2' ], specs)
-      expect(route).to.be.instanceof(Route)
-      expect(route.primary).to.equal('primary')
-      expect(route.secondary).to.deep.equal(['secondary1', 'secondary2' ])
-      expect(route.specs).to.be.instanceof(Map)
+      expect(route).toBeInstanceOf(Route)
+      expect(route.primary).toEqual('primary')
+      expect(route.secondary).toEqual(['secondary1', 'secondary2' ])
+      expect(route.specs).toBeInstanceOf(Map)
     })
 
     it('should create Route only with primary', () => {
       const route = new Route('primary')
-      expect(route.primary).to.equal('primary')
+      expect(route.primary).toEqual('primary')
     })
 
     it('should create Route only with secondary', () => {
       const route = new Route(null, ['secondary1', 'secondary2'])
-      expect(route.primary).to.be.null
-      expect(route.secondary).to.deep.equal(['secondary1', 'secondary2' ])
+      expect(route.primary).toBeNull()
+      expect(route.secondary).toEqual(['secondary1', 'secondary2' ])
     })
 
     it('should create Route only with specs', () => {
@@ -29,9 +27,9 @@ describe('Route', () => {
       const specs = new Map<string, Route>()
       specs.set('location', subRoute)
       const route = new Route(null, undefined, specs)
-      expect(route.primary).to.be.null
-      expect(route.secondary).to.be.empty
-      expect(route.specs).to.deep.equal(specs)
+      expect(route.primary).toBeNull()
+      expect(route.secondary).toEqual([])
+      expect(route.specs).toEqual(specs)
     })
   })
 })

@@ -1,7 +1,6 @@
 import * as _ from 'lodash'
 import Client from '../model/Client'
 import Route from '../model/Route'
-import WechatAccount from '../model/WechatAccount'
 import DataSource from './DataSource'
 
 class SimpleDataSource extends DataSource {
@@ -28,7 +27,7 @@ class SimpleDataSource extends DataSource {
     })
     return clients
   }
-  public async getRootRoute() {
+  public async getRootRoute(): Promise<Route> {
     return this.loadRootRoute(this.routes)
   }
 }
