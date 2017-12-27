@@ -2,7 +2,7 @@ import * as Koa from 'koa'
 import * as WechatCrypto from 'wechat-crypto'
 import WechatAccount from '../model/WechatAccount'
 import ClientRouter from './ClientRouter'
-import DataSource from './DataSource'
+import {IDataSource} from './DataSource'
 import Dispatcher from './Dispatcher'
 import Helper from './Helper'
 
@@ -10,9 +10,9 @@ class MessageRouter {
   private cryptor: WechatCrypto
   private account: WechatAccount
   private dispatcher: Dispatcher
-  constructor(wechatAccount: WechatAccount, dataSource: DataSource) {
+  constructor(wechatAccount: WechatAccount, dataSource: IDataSource) {
     this.account = wechatAccount
-    const clientRouter = new ClientRouter(dataSource)
+    const clientRouter = new ClientRouter(dataSource.getRoutes())
     this.dispatcher = new Dispatcher(clientRouter)
     this.cryptor = new WechatCrypto(wechatAccount.token, wechatAccount.encodingAESKey, wechatAccount.appId)
   }

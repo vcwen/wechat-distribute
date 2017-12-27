@@ -2,15 +2,17 @@ import { Readable } from 'stream'
 import * as WechatCrypto from 'wechat-crypto'
 import Helper from '../../src/lib/Helper'
 import MessageRouter from '../../src/lib/MessageRouter'
+import { SimpleDataSource } from '../../src/main'
 import WechatAccount from '../../src/model/WechatAccount'
 import MessageHelper from './MessageHelper'
 
 describe('MessageRouter', () => {
+  const datasource = new SimpleDataSource({})
   describe('#constructor', () => {
     it('should create MessageRouter', () => {
       const account = new WechatAccount('app', 'appId', 'secret',
         'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-      const router = new MessageRouter(account, {} as any)
+      const router = new MessageRouter(account, datasource)
       expect(router).toBeInstanceOf(MessageRouter)
     })
   })
@@ -18,7 +20,7 @@ describe('MessageRouter', () => {
     it('should return echostr for unencrypted validation', (done) => {
       const account = new WechatAccount('app', 'appId', 'secret',
         'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-      const router = new MessageRouter(account, {} as any)
+      const router = new MessageRouter(account, datasource)
       const signature = Helper.getSignature(1499158830, 'nonce', account.token)
       const context = {
         method: 'GET',
@@ -38,7 +40,7 @@ describe('MessageRouter', () => {
     it('should return echostr for encrypted validation', (done) => {
       const account = new WechatAccount('app', 'appId', 'secret',
         'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-      const router = new MessageRouter(account, {} as any)
+      const router = new MessageRouter(account, datasource)
       const cryptor = new WechatCrypto(account.token, account.encodingAESKey, account.appId)
       const echostr = cryptor.encrypt('echoecho')
       const signature = cryptor.getSignature(1499158830, 'nonce', echostr)
@@ -61,7 +63,7 @@ describe('MessageRouter', () => {
     it('should return 401 when validation failed', (done) => {
       const account = new WechatAccount('app', 'appId', 'secret',
         'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-      const router = new MessageRouter(account, {} as any)
+      const router = new MessageRouter(account, datasource)
       const context = {
         method: 'GET',
         query: {
@@ -81,7 +83,7 @@ describe('MessageRouter', () => {
     it('should return 401 when unencrypted notification has invalid signature', (done) => {
       const account = new WechatAccount('app', 'appId', 'secret',
         'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-      const router = new MessageRouter(account, {} as any)
+      const router = new MessageRouter(account, datasource)
       const context = {
         method: 'POST',
         query: {
@@ -100,7 +102,7 @@ describe('MessageRouter', () => {
     it('should dispatch  message if everything is good', (done) => {
       const account = new WechatAccount('app', 'appId', 'secret',
         'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-      const router: any = new MessageRouter(account, {} as any)
+      const router: any = new MessageRouter(account, datasource)
       router.dispatcher = {
         dispatch(_, message) {
           expect(message.msgType).toBe('event')
@@ -157,7 +159,7 @@ describe('MessageRouter', () => {
     it('should return 501 if method is not GET or POST', (done) => {
       const account = new WechatAccount('app', 'appId', 'secret',
         'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-      const router = new MessageRouter(account, {} as any)
+      const router = new MessageRouter(account, datasource)
       const context = {
         method: 'PUT',
         query: {

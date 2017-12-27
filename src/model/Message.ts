@@ -1,5 +1,5 @@
 import * as camelCase from 'camelcase'
-class Message  {
+export class Message  {
   public toUserName: string
   public fromUserName: string
   public createTime: number

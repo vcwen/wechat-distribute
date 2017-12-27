@@ -23,34 +23,53 @@ let secondaryServer: http.Server
 
 const router = new Router()
 const account = new WechatAccount('test', 'appId', 'appSecret', 'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-const routesObj: any = {
-  primary: 'main',
-  secondary: ['secondary'],
-  specs: {
-    text: {
-      primary: 'textPrimary'
-    },
-    event: {
-      secondary: ['event_secondary1', 'event_secondary2'],
-      specs: {
-        click: {
-          primary: 'click',
-          secondary: 'datacube'
-        }
-      }
+const clientsObj = {
+  main: {
+    name: 'Main',
+    url: 'http://main.com/test',
+    interests: {
+      default: 'primary'
+    }
+  },
+  secondary: {
+    url: 'http://main.com/secondary',
+    interests: {
+      default: 'secondary'
+    }
+  },
+  textPrimary: {
+    url: 'http://main.com/textPrimary',
+    interests: {
+      text: 'primary'
+    }
+  },
+  event_secondary1: {
+    url: 'http://main.com/event_secondary1',
+    interests: {
+      event: 'secondary'
+    }
+  },
+  event_secondary2: {
+    url: 'http://main.com/event_secondary2',
+    interests: {
+      event: 'secondary'
+    }
+  },
+  datacube: {
+    url: 'http://localhost:5000/click',
+    interests: {
+      click: 'secondary'
+    }
+  },
+  click: {
+    url: 'http://localhost:4000/click',
+    interests: {
+      click: 'primary'
     }
   }
 }
-const clientsObj = {
-  main: 'http://main.com/test',
-  secondary: 'http://main.com/secondary',
-  textPrimary: 'http://main.com/textPrimary',
-  event_secondary1: 'http://main.com/event_secondary1',
-  event_secondary2: 'http://main.com/event_secondary2',
-  datacube: 'http://localhost:5000/click',
-  click: 'http://localhost:4000/click'
-}
-const datasource = new SimpleDataSource(routesObj, clientsObj)
+
+const datasource = new SimpleDataSource(clientsObj)
 const messageRouter = new MessageRouter(account, datasource)
 router.all('/wechat', messageRouter.middlewarify())
 
@@ -110,6 +129,6 @@ describe('wechat-distributor', () => {
       .set('Content-Type', 'application/xml')
       .send(wxMsg.toXmlFormat())
       .expect(200)
-      .end(() => {})
+  .end(() => {/* emptry */})
   })
 })

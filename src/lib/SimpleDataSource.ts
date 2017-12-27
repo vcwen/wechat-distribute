@@ -1,35 +1,35 @@
-import * as _ from 'lodash'
+import {List} from 'immutable'
 import Client from '../model/Client'
 import Route from '../model/Route'
-import DataSource from './DataSource'
+import {IDataSource} from './DataSource'
 
-class SimpleDataSource extends DataSource {
-  private routes: any
-  private clients: any
-  constructor(routes: any, clients: any) {
-    super()
-    this.routes = Object.assign({}, routes)
-    this.clients = Object.assign({}, clients)
-  }
-  public  async getRoutes() {
-    return this.routes
-  }
-  public async getClient(name: string) {
-    const url = _.get<any, string>(this.clients, name)
-    if (url) {
-      return new Client(name , url)
-    }
-  }
-  public async getClients(...names: string[]) {
-    const clients = _.map(names, (name) => {
-      const url = _.get<any, string>(this.clients, name)
-      return new Client(name, url)
+class SimpleDataSource implements IDataSource {
+  private clients: List<Client>
+  private routes: List<Route>
+  constructor(clients: any) {
+    const clientList = List()
+    this.clients = clientList.withMutations((mutable) => {
+      for (const key in clients) {
+        if (clients.hasOwnProperty(key)) {
+          const name = clients[key].name ? clients[key].name : key
+          const client = new Client(name, clients[key].url, clients[key].interests)
+          mutable.push(client)
+        }
+      }
     })
-    return clients
+    const routeList = List()
+    this.routes = routeList.withMutations((mutable) => {
+      this.clients.forEach((client) => {
+        mutable.merge(client.getRoutes())
+      })
+    })
   }
-  public async getRootRoute(): Promise<Route> {
-    return this.loadRootRoute(this.routes)
+  public getClients() {
+    return this.clients
+  }
+  public getRoutes() {
+    return this.routes
   }
 }
 
-export default SimpleDataSource
+export  default SimpleDataSource
