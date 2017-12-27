@@ -6,7 +6,7 @@
   "types": "./dist/main.d.ts",
   "scripts": {
     "test": "jest",
-    "coveralls": "jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+    "coveralls": "jest && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
   },
   "jest": {
     "transform": {
@@ -49,6 +49,7 @@
     "axios": "^0.16.2",
     "camelcase": "^4.0.0",
     "debug": "^2.6.3",
+    "immutable": "^4.0.0-rc.9",
     "lodash": "^4.17.4",
     "moment": "^2.17.1",
     "raw-body": "^2.2.0",
@@ -73,6 +74,7 @@
     "nyc": "^11.2.1",
     "supertest": "^3.0.0",
     "ts-jest": "^21.1.0",
+    "ts-node": "^4.0.2",
     "typescript": "^2.5.3",
     "wechat-message-mock": "^0.0.9"
   }
