@@ -1,5 +1,5 @@
 import ClientRouter from './lib/ClientRouter'
-import DataSource from './lib/DataSource'
+import {IDataSource} from './lib/DataSource'
 import Disapachter from './lib/Dispatcher'
 import MessageRouter from './lib/MessageRouter'
 import SimpleDataSource from './lib/SimpleDataSource'
@@ -8,5 +8,5 @@ import Message from './model/Message'
 import Route from './model/Route'
 import WechatAccount from './model/WechatAccount'
 
-export {ClientRouter, DataSource, Disapachter, SimpleDataSource,
+export {ClientRouter, IDataSource, Disapachter, SimpleDataSource,
   MessageRouter, Client, Message, Route, WechatAccount}

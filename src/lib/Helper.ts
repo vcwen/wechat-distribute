@@ -76,3 +76,13 @@ function formatMessage(result): any {
   }
   return message
 }
+
+export function extractAppId(url: string) {
+  const appIdRegex = /.*\/(\w+)(\??.*)$/
+  const match = appIdRegex.exec(url)
+  if (match) {
+    return match[1]
+  } else {
+    return undefined
+  }
+}

@@ -3,7 +3,7 @@ import Constants from '../../src/lib/Constants'
 import Dispatcher from '../../src/lib/Dispatcher'
 
 describe('Dispatcher', () => {
-  const clientsObj = {
+  const accounts = {
         main: {
           url: 'http://main.com/test'
         },
@@ -35,7 +35,7 @@ describe('Dispatcher', () => {
 
   describe('#dispatch', () => {
     it('should dispatch message to target primary and secondary clients', (done) => {
-      const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
+      const secondaryUrls = _.map(accounts, (item) => item.url).filter((item) => {
         return item.indexOf('click') === -1
       })
 
@@ -57,7 +57,7 @@ describe('Dispatcher', () => {
     })
     it('should return 404 when primary is not present', (done) => {
       const dispatcher = new Dispatcher({} as any)
-      const secondaryUrls = _.map(clientsObj, (item) => item.url).filter((item) => {
+      const secondaryUrls = _.map(accounts, (item) => item.url).filter((item) => {
         return item.indexOf('click') === -1
       });
       (dispatcher as any).clientRouter = {
@@ -66,7 +66,7 @@ describe('Dispatcher', () => {
         }
       };
       (dispatcher as any).dispatchPrimary = async (_1, client) => {
-        expect(client).toEqual('http://main.com/click')
+        expect(client).toEqual('')
       }
       (dispatcher as any).dispatchSecondary = async (_1, clients) => {
         expect(clients).toEqual(secondaryUrls)

@@ -1,42 +1,48 @@
 import * as Koa from 'koa'
-import * as WechatCrypto from 'wechat-crypto'
-import WechatAccount from '../model/WechatAccount'
 import ClientRouter from './ClientRouter'
 import {IDataSource} from './DataSource'
 import Dispatcher from './Dispatcher'
 import Helper from './Helper'
+import {extractAppId} from './Helper'
 
 class MessageRouter {
-  private cryptor: WechatCrypto
-  private account: WechatAccount
+  private dataSource: IDataSource
   private dispatcher: Dispatcher
-  constructor(wechatAccount: WechatAccount, dataSource: IDataSource) {
-    this.account = wechatAccount
-    const clientRouter = new ClientRouter(dataSource.getRoutes())
+  constructor(dataSource: IDataSource) {
+    const clientRouter = new ClientRouter(dataSource)
     this.dispatcher = new Dispatcher(clientRouter)
-    this.cryptor = new WechatCrypto(wechatAccount.token, wechatAccount.encodingAESKey, wechatAccount.appId)
+    this.dataSource = dataSource
   }
   public middlewarify() {
+
     return async (ctx: Koa.Context) => {
       const query = ctx.query
       const encrypted = !!(query.encrypt_type && query.encrypt_type === 'aes' && query.msg_signature)
       const timestamp = query.timestamp
       const nonce = query.nonce
       const echostr = query.echostr
-
+      const appId = extractAppId(ctx.originalUrl)
+      if (!appId) {
+        return ctx.throw(404)
+      }
+      const account = this.dataSource.getWechatAccount(appId)
+      if (!account) {
+        return ctx.throw(404)
+      }
+      const cryptor = this.dataSource.getCryptor(appId)
       if (ctx.method === 'GET') {
         let valid = false
         if (encrypted) {
           const signature = query.msg_signature
-          valid = signature === this.cryptor.getSignature(timestamp, nonce, echostr)
+          valid = signature === cryptor.getSignature(timestamp, nonce, echostr)
         } else {
-          valid = query.signature === Helper.getSignature(timestamp, nonce, this.account.token)
+          valid = query.signature === Helper.getSignature(timestamp, nonce, account.token)
         }
         if (!valid) {
-          ctx.throw(401, 'Invalid signature')
+          return ctx.throw(401, 'Invalid signature')
         } else {
           if (encrypted) {
-            const decrypted = this.cryptor.decrypt(echostr)
+            const decrypted = cryptor.decrypt(echostr)
             ctx.body = decrypted.message
           } else {
             ctx.body = echostr
@@ -44,12 +50,11 @@ class MessageRouter {
         }
       } else if (ctx.method === 'POST') {
         if (!encrypted) {
-          if (query.signature !== Helper.getSignature(timestamp, nonce, this.account.token)) {
+          if (query.signature !== Helper.getSignature(timestamp, nonce, account.token)) {
             return ctx.throw(401, 'Invalid signature')
           }
         }
-
-        const message = await Helper.extractWechatMessage(ctx, this.cryptor)
+        const message = await Helper.extractWechatMessage(ctx, cryptor)
         await this.dispatcher.dispatch(ctx, message)
       } else {
         ctx.throw(501, 'Not Implemented')

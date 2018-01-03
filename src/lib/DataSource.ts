@@ -1,6 +1,7 @@
 // import * as _ from 'lodash'
 // import Client from '../model/Client'
 import {List} from 'immutable'
+import { WechatAccount } from '../main'
 import {Client} from '../model/Client'
 import {Route} from '../model/Route'
 // abstract class DataSource {
@@ -31,6 +32,10 @@ import {Route} from '../model/Route'
 // export default DataSource
 
 export interface IDataSource {
-  getClients(): List<Client>
-  getRoutes(): List<Route>
+  getWechatAccounts(): List<WechatAccount>
+  getWechatAccount(appId: string): WechatAccount | undefined
+  getClients(appId: string): List<Client>
+  getRoutes(appId: string): List<Route>
+  getRoutesById(id: string): List<Route>
+  getCryptor(appId: string): any
 }

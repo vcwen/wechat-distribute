@@ -13,7 +13,7 @@ import {MessageRouter, SimpleDataSource, WechatAccount} from '../src/main'
 const config = {
   token: 'token',
   appid: 'appId',
-  encodingAESKey: 'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe'
+  encodingAESKey: '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee'
 }
 const app = new Koa()
 const appPrimary = new Koa()
@@ -22,56 +22,67 @@ let primaryServer: http.Server
 let secondaryServer: http.Server
 
 const router = new Router()
-const account = new WechatAccount('test', 'appId', 'appSecret', 'REmXC07Twr6ssl9tCt4KJJTiTzqZyC1cHRltLmntZbe', 'token')
-const clientsObj = {
-  main: {
-    name: 'Main',
-    url: 'http://main.com/test',
-    interests: {
-      default: 'primary'
-    }
-  },
-  secondary: {
-    url: 'http://main.com/secondary',
-    interests: {
-      default: 'secondary'
-    }
-  },
-  textPrimary: {
-    url: 'http://main.com/textPrimary',
-    interests: {
-      text: 'primary'
-    }
-  },
-  event_secondary1: {
-    url: 'http://main.com/event_secondary1',
-    interests: {
-      event: 'secondary'
-    }
-  },
-  event_secondary2: {
-    url: 'http://main.com/event_secondary2',
-    interests: {
-      event: 'secondary'
-    }
-  },
-  datacube: {
-    url: 'http://localhost:5000/click',
-    interests: {
-      click: 'secondary'
-    }
-  },
-  click: {
-    url: 'http://localhost:4000/click',
-    interests: {
-      click: 'primary'
+const account = new WechatAccount('jay', 'test', 'appId', 'appSecret',
+  '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
+const accounts = {
+  test: {
+    appId: 'appId',
+    name: 'account_name',
+    id: 'jay',
+    appSecret: 'appSecret',
+    encodingAESKey: '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee',
+    token: 'token',
+    clients: {
+      main: {
+        name: 'Main',
+        url: 'http://main.com/test',
+        interests: {
+          default: 'primary'
+        }
+      },
+      secondary: {
+        url: 'http://main.com/secondary',
+        interests: {
+          default: 'secondary'
+        }
+      },
+      textPrimary: {
+        url: 'http://main.com/textPrimary',
+        interests: {
+          text: 'primary'
+        }
+      },
+      event_secondary1: {
+        url: 'http://main.com/event_secondary1',
+        interests: {
+          event: 'secondary'
+        }
+      },
+      event_secondary2: {
+        url: 'http://main.com/event_secondary2',
+        interests: {
+          event: 'secondary'
+        }
+      },
+      datacube: {
+        url: 'http://localhost:5000/click',
+        interests: {
+          click: 'secondary'
+        }
+      },
+      click: {
+        url: 'http://localhost:4000/click',
+        interests: {
+          click: 'primary'
+        }
+      }
     }
   }
 }
 
-const datasource = new SimpleDataSource(clientsObj)
-const messageRouter = new MessageRouter(account, datasource)
-router.all('/wechat', messageRouter.middlewarify())
+const datasource = new SimpleDataSource(accounts)
+const messageRouter = new MessageRouter(datasource)
+router.all('/wechat/:appId', messageRouter.middlewarify())
 
 app.use(router.routes()).use(router.allowedMethods())
 const timestamp = Math.floor(Date.now() / 1000)
@@ -104,11 +115,12 @@ describe('wechat-distributor', () => {
     const nonce = MessageHelper.generateNonce()
     const signature = MessageHelper.generateSignature('token', nonce, timestamp)
     request
-      .post(`/wechat?` + qs.stringify({nonce, timestamp, signature}))
+      .post(`/wechat/appId?` + qs.stringify({nonce, timestamp, signature}))
       .set('Content-Type', 'application/xml')
       .send(wxMsg.toXmlFormat())
       .expect(200)
       .end(async (_, res) => {
+        // expect(res.statusCode).toBe(200)
         const reply = await Helper.parseMessageXml(res.text)
         expect(reply.MsgType).toEqual('text')
         expect(reply.Content).toEqual('hehe')
@@ -125,7 +137,7 @@ describe('wechat-distributor', () => {
       done()
     })
     request
-      .post(`/wechat?` + qs.stringify({ nonce, timestamp, signature }))
+      .post(`/wechat/appId?` + qs.stringify({ nonce, timestamp, signature }))
       .set('Content-Type', 'application/xml')
       .send(wxMsg.toXmlFormat())
       .expect(200)

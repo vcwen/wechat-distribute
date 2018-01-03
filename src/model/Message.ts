@@ -1,9 +1,11 @@
 import * as camelCase from 'camelcase'
+import {List} from 'immutable'
 export class Message  {
   public toUserName: string
   public fromUserName: string
   public createTime: number
   public msgType: string
+  public msgId?: string
   public event?: string
   public eventKey?: string
   public rawXml: Buffer
@@ -22,9 +24,9 @@ export class Message  {
   }
   public getPhases() {
     if (this.event) {
-      return [this.msgType, this.event as string]
+      return List.of(this.msgType, this.event)
     } else {
-      return [this.msgType]
+      return List.of(this.msgType)
     }
   }
 }

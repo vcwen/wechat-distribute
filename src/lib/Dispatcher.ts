@@ -3,7 +3,6 @@ import {Set} from 'immutable'
 import * as Koa from 'koa'
 import * as Url from 'url'
 import * as logger from 'winston'
-import Client from '../model/Client'
 import Message from '../model/Message'
 import ClientRouter from './ClientRouter'
 import Constants from './Constants'
@@ -15,12 +14,8 @@ class Dispatcher {
   }
   public async dispatch(ctx: Koa.Context, message: Message) {
     const [primaryClient, secondaryClients] = await this.clientRouter.getClients(message)
+    await this.dispatchPrimary(ctx, primaryClient, message)
     this.dispatchSecondary(ctx, secondaryClients, message)
-    if (!primaryClient) {
-      ctx.status = 404
-    } else {
-      await this.dispatchPrimary(ctx, primaryClient, message)
-    }
 
   }
   private async dispatchPrimary(ctx: Koa.Context, url: string, message: Message) {
