@@ -1,9 +1,10 @@
 import * as Koa from 'koa'
+import { IRouterContext } from 'koa-router'
 import ClientRouter from './ClientRouter'
-import {IDataSource} from './DataSource'
+import { IDataSource } from './DataSource'
 import Dispatcher from './Dispatcher'
 import Helper from './Helper'
-import {extractAppId} from './Helper'
+import { extractAppId } from './Helper'
 
 class MessageRouter {
   private dataSource: IDataSource
@@ -14,8 +15,7 @@ class MessageRouter {
     this.dataSource = dataSource
   }
   public middlewarify() {
-
-    return async (ctx: Koa.Context) => {
+    return async (ctx: IRouterContext) => {
       const query = ctx.query
       const encrypted = !!(query.encrypt_type && query.encrypt_type === 'aes' && query.msg_signature)
       const timestamp = query.timestamp

@@ -46,6 +46,7 @@
   },
   "homepage": "https://github.com/wenwei1202/wechat-distribute#readme",
   "dependencies": {
+    "@types/koa-router": "^7.0.28",
     "axios": "^0.16.2",
     "camelcase": "^4.0.0",
     "debug": "^2.6.3",
