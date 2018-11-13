@@ -4,7 +4,6 @@ import Route from '../../src/model/Route'
 describe('Route', () => {
   describe('#constructor', () => {
     it('should create Route', () => {
-      const specs = new Map<string, Route>()
       const route = new Route('primary', 'image', 'http://test.com/test', Priority.PRIMARY)
       expect(route).toBeInstanceOf(Route)
       expect(route.name).toEqual('primary')

@@ -5,7 +5,7 @@ describe('SimpleDataSource', () => {
     test: {
       appId: 'appId',
       name: 'account_name',
-      id: 'id',
+      wechatId: 'wechat_id',
       appSecret: 'appSecret',
       encodingAESKey: '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee',
       token: 'token',
@@ -44,13 +44,13 @@ describe('SimpleDataSource', () => {
         datacube: {
           url: 'http://main.com/datacube',
           interests: {
-            click: 'secondary'
+            'event.click': 'secondary'
           }
         },
         click: {
           url: 'http://main.com/click',
           interests: {
-            click: 'primary'
+            'event.click': 'primary'
           }
         }
       }
@@ -66,16 +66,8 @@ describe('SimpleDataSource', () => {
   describe('#getClients', () => {
     it('should return clients', async () => {
       const simpleDs = new SimpleDataSource(accounts)
-      const clients = simpleDs.getClients('appId')
+      const clients = simpleDs.getClientsByWechatId('wechat_id')
       expect(clients.size).toBe(7)
-    })
-  })
-
-  describe('#getRoutes', () => {
-    it('should return routes ', async () => {
-      const simpleDs = new SimpleDataSource(accounts)
-      const routes = await simpleDs.getRoutes('appId')
-      expect(routes.size).toBe(7)
     })
   })
 })

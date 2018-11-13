@@ -2,7 +2,7 @@ import * as crypto from 'crypto'
 import * as ejs from 'ejs'
 
 const encryptedTpl = '<xml><Encrypt><![CDATA[<%-encrypt%>]]></Encrypt></xml>'
-const compiledTpl = ejs.compile(encryptedTpl)
+const compiledTpl = ejs.compile(encryptedTpl, {})
 
 export default class MessageHelper {
   public static generateSignature(token, nonce, timestamp) {
@@ -25,8 +25,7 @@ export default class MessageHelper {
   public static getTimestamp() {
     return Math.floor(Date.now() / 1000)
   }
-  public static encryptMessage(wechatEncryptor: any, content: string) {
-    const encryptMessage = wechatEncryptor.encrypt(content)
+  public static encryptMessage(encryptMessage: string) {
     const encryptXml = compiledTpl({
       encrypt: encryptMessage
     })

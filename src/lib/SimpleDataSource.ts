@@ -1,86 +1,79 @@
-import {List, Map} from 'immutable'
-import * as WechatCrypto from 'wechat-crypto'
+import { List, Map } from 'immutable'
 import { WechatAccount } from '../main'
 import Client from '../model/Client'
-import Route from '../model/Route'
-import {IDataSource} from './DataSource'
+import { Interest } from '../model/Interest'
+import { IDataSource } from './DataSource'
 
-class SimpleDataSource implements IDataSource {
-  private accountMap: Map<string, WechatAccount>
-  private clientMap: Map<string, List<Client>>
-  private routeMap: Map<string, List<Route>>
-  private crytorMap: Map<string, any>
-  constructor(accounts: any) {
-    this.accountMap = Map<string, WechatAccount>().withMutations((mutable) => {
-      for (const key in accounts) {
-        if (accounts.hasOwnProperty(key)) {
-          const name = accounts[key].name ? accounts[key].name : key
-          const accountData = accounts[key]
-          const account = new WechatAccount(accountData.id, name, accountData.appId,
-            accountData.appSecret, accountData.encodingAESKey, accountData.token)
-          mutable.set(accountData.appId, account)
-        }
-      }
-    })
-    this.crytorMap = Map<string, any>().withMutations((mutable) => {
-      for (const account of this.accountMap.values()) {
-        const cryptor = new WechatCrypto(account.token, account.encodingAESKey, account.appId)
-        mutable.set(account.appId, cryptor)
-      }
-    })
-
-    this.clientMap = Map<string, List<Client>>()
-    this.routeMap = Map<string, List<Route>>()
-    for (const key in accounts) {
-      if (accounts.hasOwnProperty(key)) {
-        const account = accounts[key]
-        const clients = account.clients
-        const clientList = List<Client>().withMutations((mutable) => {
-          for (const prop in clients) {
-            if (clients.hasOwnProperty(prop)) {
-              const name = clients[prop].name ? clients[prop].name : prop
-              const client = new Client(name, clients[prop].url, clients[prop].interests)
-              mutable.push(client)
-            }
-          }
-        })
-        this.clientMap = this.clientMap.set(account.appId, clientList)
-        const routeList = List<Route>().withMutations((mutable) => {
-          clientList.forEach((client) => {
-            mutable.merge(client.getRoutes())
-          })
-        })
-        this.routeMap = this.routeMap.set(accounts[key].appId, routeList)
-      }
+const getInterests = (data: any, parentEvent: string = '') => {
+  const events = Object.getOwnPropertyNames(data)
+  let interests = [] as Interest[]
+  for (const event of events) {
+    let fullEvent = parentEvent ? [parentEvent, event].join('.') : event
+    if (event === 'default' && parentEvent) {
+      fullEvent = parentEvent
+    } else {
+      fullEvent = event
     }
-
+    if (typeof data[event] === 'string') {
+      interests.push(new Interest(fullEvent, data[event]))
+    } else {
+      interests = interests.concat(getInterests(data[event], fullEvent))
+    }
+  }
+  return interests
+}
+class SimpleDataSource implements IDataSource {
+  private accounts: Map<string, WechatAccount>
+  private clients: Map<string, List<Client>> = Map()
+  constructor(accounts: any) {
+    const names = Object.getOwnPropertyNames(accounts)
+    this.accounts = Map<string, WechatAccount>().withMutations((mutable) => {
+      for (const name of names) {
+        const accountData = accounts[name]
+        const accountName = accountData.name ? accountData.name : name
+        const account = new WechatAccount(
+          accountName,
+          accountData.wechatId,
+          accountData.appId,
+          accountData.appSecret,
+          accountData.encodingAESKey,
+          accountData.token
+        )
+        mutable.set(account.wechatId, account)
+        const clientsData = accountData.clients
+        const props = Object.getOwnPropertyNames(clientsData)
+        const clients = [] as Client[]
+        for (const prop of props) {
+          const clientName = clientsData[prop].name ? clientsData[prop].name : prop
+          const interestsData = clientsData[prop].interests
+          const client = new Client(clientName, clientsData[prop].url, getInterests(interestsData))
+          clients.push(client)
+        }
+        const clientList = List.of(...clients)
+        this.clients = this.clients.set(account.wechatId, clientList)
+      }
+    })
   }
   public getWechatAccounts() {
-    return this.accountMap.toList()
+    return this.accounts.toList()
   }
-  public getWechatAccount(appId: string) {
-    return this.accountMap.get(appId)
+  public getWechatAccountByWechatId(wechatId: string) {
+    return this.accounts.get(wechatId)
   }
-  public getWechatAccountById(id: string) {
-    return this.accountMap.find((account) => account.id === id)
+  public getClientsByWechatId(wechatId: string) {
+    return this.clients.get(wechatId) || List<Client>()
   }
-  public getClients(appId: string) {
-    return this.clientMap.get(appId) || List<Client>()
+  public getWechatAccountByAppId(appId: string) {
+    return this.accounts.find((account) => account.appId === appId)
   }
-  public getRoutes(appId: string) {
-    return this.routeMap.get(appId) || List<Route>()
-  }
-  public getRoutesById(id: string): List<Route> {
-    const account = this.getWechatAccountById(id)
+  public getClientsByAppId(appId: string) {
+    const account = this.accounts.find((item) => item.appId === appId)
     if (account) {
-      return this.getRoutes(account.appId)
+      return this.clients.get(account.wechatId) || List<Client>()
     } else {
-      return List()
+      return List<Client>()
     }
-  }
-  public getCryptor(appId: string) {
-    return this.crytorMap.get(appId)
   }
 }
 
-export  default SimpleDataSource
+export default SimpleDataSource

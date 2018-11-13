@@ -1,7 +1,7 @@
 import { Readable } from 'stream'
-import * as WechatCrypto from 'wechat-crypto'
-import Helper from '../../src/lib/Helper'
 import MessageRouter from '../../src/lib/MessageRouter'
+import { getSignature } from '../../src/lib/utils'
+import { WXBizMsgCrypt } from '../../src/lib/WXBizMsgCrypt'
 import { SimpleDataSource } from '../../src/main'
 import WechatAccount from '../../src/model/WechatAccount'
 import MessageHelper from './MessageHelper'
@@ -11,27 +11,38 @@ describe('MessageRouter', () => {
     test: {
       appId: 'appId',
       name: 'account_name',
-      id: 'id',
+      wechatId: 'wechat_id',
       appSecret: 'appSecret',
       encodingAESKey: '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee',
       token: 'token',
-      clients: {}
+      clients: {
+        click: {
+          url: 'http://main.com/click',
+          interests: {
+            'event.click': 'primary'
+          }
+        }
+      }
     }
   })
   describe('#constructor', () => {
     it('should create MessageRouter', () => {
-      const account = new WechatAccount('id', 'app', 'appId', 'secret',
-        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
       const router = new MessageRouter(datasource)
       expect(router).toBeInstanceOf(MessageRouter)
     })
   })
   describe('#middlewarify', () => {
     it('should return echostr for unencrypted validation', (done) => {
-      const account = new WechatAccount('id', 'app', 'appId', 'secret',
-        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
+      const account = new WechatAccount(
+        'app',
+        'wechat_id',
+        'appId',
+        'secret',
+        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee',
+        'token'
+      )
       const router = new MessageRouter(datasource)
-      const signature = Helper.getSignature(1499158830, 'nonce', account.token)
+      const signature = getSignature(1499158830, 'nonce', account.token)
       const context = {
         method: 'GET',
         query: {
@@ -40,29 +51,8 @@ describe('MessageRouter', () => {
           echostr: 'echoecho',
           signature
         },
-        originalUrl: '/wechat/appId',
-        set body(val) {
-          expect(val).toEqual('echoecho')
-          done()
-        }
-      }
-      router.middlewarify()(context as any)
-    })
-    it('should return echostr for encrypted validation', (done) => {
-      const account = new WechatAccount('id', 'app', 'appId', 'secret',
-        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
-      const router = new MessageRouter(datasource)
-      const cryptor = new WechatCrypto(account.token, account.encodingAESKey, account.appId)
-      const echostr = cryptor.encrypt('echoecho')
-      const signature = cryptor.getSignature(1499158830, 'nonce', echostr)
-      const context = {
-        method: 'GET',
-        query: {
-          timestamp: 1499158830,
-          nonce: 'nonce',
-          echostr,
-          msg_signature: signature,
-          encrypt_type: 'aes'
+        params: {
+          appId: 'appId'
         },
         originalUrl: '/wechat/appId',
         set body(val) {
@@ -73,17 +63,16 @@ describe('MessageRouter', () => {
       router.middlewarify()(context as any)
     })
     it('should return 401 when validation failed', (done) => {
-      const account = new WechatAccount('id', 'app', 'appId', 'secret',
-        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
       const router = new MessageRouter(datasource)
       const context = {
         method: 'GET',
+        params: {
+          appId: 'appId'
+        },
         query: {
           timestamp: 1499158830,
           nonce: 'nonce',
-          echostr: 'echoecho',
-          msg_signature: '1499158830nonceechoecho',
-          encrypt_type: 'aes'
+          echostr: 'echoecho'
         },
         originalUrl: '/wechat/appId',
         throw(code) {
@@ -94,11 +83,12 @@ describe('MessageRouter', () => {
       router.middlewarify()(context as any)
     })
     it('should return 401 when unencrypted notification has invalid signature', (done) => {
-      const account = new WechatAccount('id', 'app', 'appId', 'secret',
-        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
       const router = new MessageRouter(datasource)
       const context = {
         method: 'POST',
+        params: {
+          appId: 'appId'
+        },
         query: {
           timestamp: 1499158830,
           nonce: 'nonce',
@@ -114,8 +104,14 @@ describe('MessageRouter', () => {
       router.middlewarify()(context as any)
     })
     it('should dispatch  message if everything is good', (done) => {
-      const account = new WechatAccount('id', 'app', 'appId', 'secret',
-        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
+      const account = new WechatAccount(
+        'app',
+        'wechat_id',
+        'appId',
+        'secret',
+        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee',
+        'token'
+      )
       const router: any = new MessageRouter(datasource)
       router.dispatcher = {
         dispatch(_, message) {
@@ -125,7 +121,7 @@ describe('MessageRouter', () => {
           done()
         }
       }
-      const cryptor = new WechatCrypto(account.token, account.encodingAESKey, account.appId)
+      const cryptor = new WXBizMsgCrypt(account.token, account.encodingAESKey, account.appId)
       const msg = `<xml>
       <ToUserName><![CDATA[jay]]></ToUserName>
       <FromUserName><![CDATA[vincent]]></FromUserName>
@@ -134,7 +130,7 @@ describe('MessageRouter', () => {
       <Event><![CDATA[CLICK]]></Event>
       <EventKey><![CDATA[event_key_123]]></EventKey>
       </xml>`
-      const content = MessageHelper.encryptMessage(cryptor, msg)
+      const content = MessageHelper.encryptMessage(cryptor.encrypt(msg))
       const len = Buffer.byteLength(content)
 
       // tslint:disable-next-line:max-classes-per-file
@@ -153,12 +149,15 @@ describe('MessageRouter', () => {
           }
         }
       }
-      const regex  = new RegExp('\\[CDATA\\[(.+)\\]\\]')
-      const match = regex.exec(content)
-      const signature  = cryptor.getSignature(1499158830, 'nonce', match[1])
+      const regex = new RegExp('\\[CDATA\\[(.+)\\]\\]')
+      const match: any = regex.exec(content)
+      const signature = cryptor.getSignature('1499158830', 'nonce', match[1])
       const readable = new MyReadable()
       const context = {
         method: 'POST',
+        params: {
+          appId: 'appId'
+        },
         length: len,
         req: readable,
         originalUrl: '/wechat/appId',
@@ -167,16 +166,21 @@ describe('MessageRouter', () => {
           nonce: 'nonce',
           msg_signature: signature,
           encrypt_type: 'aes'
+        },
+        throw(code: number, message: string) {
+          // tslint:disable-next-line:no-console
+          console.log(`code:${code}-- ${message}`)
         }
       }
       router.middlewarify()(context as any)
     })
     it('should return 501 if method is not GET or POST', (done) => {
-      const account = new WechatAccount('id', 'app', 'appId', 'secret',
-        '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
       const router = new MessageRouter(datasource)
       const context = {
         method: 'PUT',
+        params: {
+          appId: 'appId'
+        },
         query: {
           timestamp: 1499158830,
           nonce: 'nonce',

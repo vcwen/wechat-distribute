@@ -1,61 +1,68 @@
-import {List, Set} from 'immutable'
-import { IDataSource } from '../main'
-import {Message} from '../model/Message'
+import { List, Set } from 'immutable'
+import Client from '../model/Client'
+import { Message } from '../model/Message'
 import Route from '../model/Route'
 import { Priority } from './Constants'
 
 class ClientRouter {
-  private dataSource: IDataSource
-
-  constructor(dataSource: IDataSource) {
-    this.dataSource = dataSource
+  private _routes: List<Route>
+  constructor(clients: List<Client>) {
+    const routes = clients.reduce(
+      (acc, client) => {
+        const rs = client.interests.map((interest) => {
+          return new Route(client.name, interest.event, client.url, interest.priority)
+        })
+        return acc.concat(rs)
+      },
+      [] as Route[]
+    )
+    this._routes = List.of(...routes)
   }
-  public getClients(message: Message): [string, Set<string>] {
-    const routes = this.dataSource.getRoutesById(message.toUserName)
-    if (routes.isEmpty()) {
-      throw new Error(`Not clients found for this message.[${message.msgId}]`)
-    }
+  public getTargetClients(message: Message): [string | undefined, Set<string>] {
     const phaseList = message.getPhases()
-    const primary = this.getPrimaryRoute(routes, phaseList).url
-    const secondaries = Set.of(...this.getSecondaryRoutes(routes, phaseList).map((item) => item.url))
-      .filterNot((url) => url === primary)
+    const primaryRoute = this._getPrimaryRoute(phaseList)
+    const primary = primaryRoute ? primaryRoute.url : undefined
+    const secondaries = Set.of(...this._getSecondaryRoutes(phaseList).map((item) => item.url)).filterNot(
+      (url) => url === primary
+    )
     return [primary, secondaries]
   }
-  private getPrimaryRoute(routes: List<Route>, phases: List<string>, excludes: Set<string> = Set()): Route {
+  private _getPrimaryRoute(phases: List<string>, excludes: Set<string> = Set()): Route | undefined {
     if (phases.isEmpty()) {
-      const route = routes.find((item) =>
-        item.event === 'default' && item.priority === Priority.PRIMARY && !excludes.contains(item.url))
+      const route = this._routes.find(
+        (item) => item.event === 'default' && item.priority === Priority.PRIMARY && !excludes.contains(item.url)
+      )
+      if (route) {
+        return route
+      }
+    } else {
+      const event = phases.join('.')
+      const route = this._routes.find(
+        (item) => item.event === event && item.priority === Priority.PRIMARY && !excludes.contains(item.url)
+      )
       if (route) {
         return route
       } else {
-        throw new Error('No valid primary route found.')
-      }
-    } else {
-      const event = phases.last()
-      const route = routes.find((item) => item.event === event
-        && item.priority === Priority.PRIMARY && !excludes.contains(item.url))
-      if (route) {
-        return route
-      } else {
-        const ex = this.getExcludeClients(routes, phases)
-        return this.getPrimaryRoute(routes, phases.pop(), excludes.merge(ex))
+        const ex = this.getExcludeClients(phases)
+        return this._getPrimaryRoute(phases.pop(), excludes.merge(ex))
       }
     }
   }
-  private getSecondaryRoutes(routes: List<Route>, phases: List<string>, excludes: Set<string> = Set()): List<Route> {
+  private _getSecondaryRoutes(phases: List<string>, excludes: Set<string> = Set()): List<Route> {
     if (phases.isEmpty()) {
-      return routes.filter((item) => item.event === 'default' && !excludes.contains(item.url))
+      return this._routes.filter((item) => item.event === 'default' && !excludes.contains(item.url))
     } else {
-      const event = phases.last()
-      const rs = routes.filter((item) =>
-        item.event === event && item.priority !== Priority.EXCLUDE && !excludes.contains(item.url))
-      const ex = this.getExcludeClients(routes, phases)
-      return rs.merge(this.getSecondaryRoutes(routes, phases.pop(), excludes.merge(ex)))
+      const event = phases.join('.')
+      const rs = this._routes.filter(
+        (item) => item.event === event && item.priority !== Priority.EXCLUDE && !excludes.contains(item.url)
+      )
+      const ex = this.getExcludeClients(phases)
+      return rs.merge(this._getSecondaryRoutes(phases.pop(), excludes.merge(ex)))
     }
   }
-  private getExcludeClients(routes: List<Route>, phases: List<string>): Set<string> {
-    const event = phases.last()
-    const excludes = routes.filter((item) => item.event === event && item.priority === Priority.EXCLUDE)
+  private getExcludeClients(phases: List<string>): Set<string> {
+    const event = phases.join('.')
+    const excludes = this._routes.filter((item) => item.event === event && item.priority === Priority.EXCLUDE)
     return excludes.map((item) => item.url).toSet()
   }
 }

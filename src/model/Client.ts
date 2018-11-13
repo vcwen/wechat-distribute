@@ -1,32 +1,14 @@
-import {List} from 'immutable'
-import { Priority } from '../lib/Constants'
-import { Route } from '../main'
+import { Interest } from './Interest'
 
 export class Client {
   public name: string
   public url: string
-  public interests: IInterests
-  constructor( name: string, url: string, interests: IInterests) {
+  public interests: Interest[]
+  constructor(name: string, url: string, interests: Interest[]) {
     this.name = name
     this.url = url
     this.interests = interests
   }
-  public getRoutes() {
-    const routes: List<Route> = List()
-    return routes.withMutations((mutable) => {
-      for (const key in this.interests) {
-        if (this.interests.hasOwnProperty(key)) {
-          const priority = this.interests[key] as Priority
-          const route = new Route(this.name, key, this.url, priority)
-          mutable.push(route)
-        }
-      }
-    })
-  }
-}
-
-export interface IInterests {
-  [prop: string]: Priority
 }
 
 // export interface IInterests {

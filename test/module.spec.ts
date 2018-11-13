@@ -1,14 +1,14 @@
-import * as  wechat from 'co-wechat'
-import * as ejs from 'ejs'
-import * as http from 'http'
-import * as Koa from 'koa'
-import * as Router from 'koa-router'
-import * as qs from 'querystring'
-import * as getRawBody from 'raw-body'
-import * as superttset from 'supertest'
-import {MessageHelper, WechatMessage} from 'wechat-message-mock'
-import Helper from '../src/lib/Helper'
-import {MessageRouter, SimpleDataSource, WechatAccount} from '../src/main'
+import wechat from 'co-wechat'
+import http from 'http'
+import Koa from 'koa'
+import Router from 'koa-router'
+import qs from 'querystring'
+import superttset from 'supertest'
+import { WechatMessage } from 'wechat-message-mock'
+import { parseXML } from '../src/lib/utils'
+import { WXBizMsgCrypt } from '../src/lib/WXBizMsgCrypt'
+import { MessageRouter, SimpleDataSource } from '../src/main'
+import MessageHelper from './lib/MessageHelper'
 
 const config = {
   token: 'token',
@@ -16,19 +16,13 @@ const config = {
   encodingAESKey: '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee'
 }
 const app = new Koa()
-const appPrimary = new Koa()
-const appSecondary = new Koa()
-let primaryServer: http.Server
-let secondaryServer: http.Server
 
 const router = new Router()
-const account = new WechatAccount('jay', 'test', 'appId', 'appSecret',
-  '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee', 'token')
 const accounts = {
   test: {
     appId: 'appId',
     name: 'account_name',
-    id: 'jay',
+    wechatId: 'wechat_id',
     appSecret: 'appSecret',
     encodingAESKey: '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee',
     token: 'token',
@@ -67,13 +61,13 @@ const accounts = {
       datacube: {
         url: 'http://localhost:5000/click',
         interests: {
-          click: 'secondary'
+          'event.click': 'secondary'
         }
       },
       click: {
         url: 'http://localhost:4000/click',
         interests: {
-          click: 'primary'
+          'event.click': 'primary'
         }
       }
     }
@@ -84,63 +78,116 @@ const datasource = new SimpleDataSource(accounts)
 const messageRouter = new MessageRouter(datasource)
 router.all('/wechat/:appId', messageRouter.middlewarify())
 
-app.use(router.routes()).use(router.allowedMethods())
+app.use(router.routes() as any).use(router.allowedMethods() as any)
 const timestamp = Math.floor(Date.now() / 1000)
-const wxMsg = new WechatMessage('event',
-  {eventKey: 'event_key_123', toUserName: 'jay', fromUserName: 'vincent', timestamp}, 'CLICK')
-const server = app.listen()
-const request = superttset(server)
-
-const stacks = [] as any[]
+const wxMsg = new WechatMessage(
+  'event',
+  { eventKey: 'event_key_123', toUserName: 'wechat_id', fromUserName: 'vincent', timestamp },
+  'CLICK'
+)
 
 describe('wechat-distributor', () => {
-  beforeAll(() => {
-    appPrimary.use(wechat(config).middleware(async (message, ctx) => {
-      return 'hehe'
-    }))
-    primaryServer = appPrimary.listen(4000)
-    appSecondary.use(wechat(config).middleware(async (message, ctx) => {
-      for ( const mid of stacks) {
-        return mid.call(null, message, ctx)
-      }
-    }))
-    secondaryServer = appSecondary.listen(5000)
-  })
-  afterAll(() => {
-    primaryServer.close()
-    secondaryServer.close()
-    server.close()
-  })
-  it('should be able to distibute message to primary client.',  (done) => {
-    const nonce = MessageHelper.generateNonce()
-    const signature = MessageHelper.generateSignature('token', nonce, timestamp)
-    request
-      .post(`/wechat/appId?` + qs.stringify({nonce, timestamp, signature}))
-      .set('Content-Type', 'application/xml')
-      .send(wxMsg.toXmlFormat())
-      .expect(200)
-      .end(async (_, res) => {
-        // expect(res.statusCode).toBe(200)
-        const reply = await Helper.parseMessageXml(res.text)
-        expect(reply.MsgType).toEqual('text')
-        expect(reply.Content).toEqual('hehe')
-        done()
+  it('should be able to distibute plain text message to clients.', (done) => {
+    const server = app.listen()
+    const request = superttset(server)
+    const appPrimary = new Koa()
+    const appSecondary = new Koa()
+    let primaryServer: http.Server
+    let secondaryServer: http.Server
+    appPrimary.use(
+      wechat(config).middleware(async () => {
+        return 'hehe'
       })
-  })
-  it('should distribute to secondary clients',  (done) => {
-    const nonce = MessageHelper.generateNonce()
-    const signature = MessageHelper.generateSignature('token', nonce, timestamp)
-    stacks.push((message) => {
-      expect(message.MsgType).toBe('event')
-      expect(message.Event).toBe('CLICK')
-      expect(message.EventKey).toBe('event_key_123')
-      done()
+    )
+    primaryServer = appPrimary.listen(4000, () => {
+      appSecondary.use(
+        wechat(config).middleware(async (message) => {
+          expect(message).toEqual(
+            expect.objectContaining({
+              ToUserName: 'wechat_id',
+              FromUserName: 'vincent',
+              MsgType: 'event',
+              Event: 'CLICK',
+              EventKey: 'event_key_123'
+            })
+          )
+        })
+      )
+      secondaryServer = appSecondary.listen(5000)
     })
+
+    const nonce = MessageHelper.generateNonce()
+    const signature = MessageHelper.generateSignature(config.token, nonce, timestamp)
     request
       .post(`/wechat/appId?` + qs.stringify({ nonce, timestamp, signature }))
       .set('Content-Type', 'application/xml')
       .send(wxMsg.toXmlFormat())
       .expect(200)
-  .end(() => {/* emptry */})
+      .end(async (_, res) => {
+        const { xml: reply } = await parseXML(res.body.toString())
+        expect(reply.msgType).toEqual('text')
+        expect(reply.content).toEqual('hehe')
+        primaryServer.close(() => {
+          secondaryServer.close(() => {
+            server.close()
+            done()
+          })
+        })
+      })
+  })
+  it('should be able to distibute encrypted message to clients.', (done) => {
+    const server = app.listen()
+    const request = superttset(server)
+    const appPrimary = new Koa()
+    const appSecondary = new Koa()
+    let primaryServer: http.Server
+    let secondaryServer: http.Server
+    appPrimary.use(
+      wechat(config).middleware(async () => {
+        return 'hehe'
+      })
+    )
+    primaryServer = appPrimary.listen(4000, () => {
+      appSecondary.use(
+        wechat(config).middleware(async (message) => {
+          expect(message).toEqual(
+            expect.objectContaining({
+              ToUserName: 'wechat_id',
+              FromUserName: 'vincent',
+              MsgType: 'event',
+              Event: 'CLICK',
+              EventKey: 'event_key_123'
+            })
+          )
+        })
+      )
+      secondaryServer = appSecondary.listen(5000)
+    })
+
+    const nonce = MessageHelper.generateNonce()
+    const cryptor = new WXBizMsgCrypt(config.token, config.encodingAESKey, config.appid)
+    const msgXml = wxMsg.toXmlFormat()
+    const encryptedXml = cryptor.encrypt(msgXml)
+    // tslint:disable-next-line:variable-name
+    const msg_signature = cryptor.getSignature(timestamp.toString(), nonce, encryptedXml)
+    const encryptedMsg = MessageHelper.encryptMessage(encryptedXml)
+    request
+      .post(`/wechat/appId?` + qs.stringify({ nonce, timestamp, msg_signature, encrypt_type: 'aes' }))
+      .set('Content-Type', 'application/xml')
+      .send(encryptedMsg)
+      .expect(200)
+      .end(async (_, res) => {
+        const { xml: reply } = await parseXML(res.body.toString())
+        const encrypted = reply.encrypt
+        const { xml: data } = await parseXML(cryptor.decrypt(encrypted))
+        expect(data.msgType).toEqual('text')
+        expect(data.content).toEqual('hehe')
+        primaryServer.close(() => {
+          secondaryServer.close(() => {
+            server.close()
+            done()
+          })
+        })
+      })
   })
 })

@@ -7,7 +7,7 @@ describe('ClientRouter', () => {
     test: {
       appId: 'appId',
       name: 'account_name',
-      id: 'id',
+      wechatId: 'wechat_id',
       appSecret: 'appSecret',
       encodingAESKey: '4nrPbcFEKJE8AH3b2chrqbmf7txGi8S0mmBSbycnTee',
       token: 'token',
@@ -46,13 +46,13 @@ describe('ClientRouter', () => {
         datacube: {
           url: 'http://main.com/datacube',
           interests: {
-            click: 'secondary'
+            'event.click': 'secondary'
           }
         },
         click: {
           url: 'http://main.com/click',
           interests: {
-            click: 'primary'
+            'event.click': 'primary'
           }
         }
       }
@@ -61,7 +61,7 @@ describe('ClientRouter', () => {
   describe('#constructor', () => {
     it('should  create ClientRouter', () => {
       const simpleDs = new SimpleDataSource(accounts)
-      const clientRouter = new ClientRouter(simpleDs)
+      const clientRouter = new ClientRouter(simpleDs.getClientsByWechatId('wechat_id'))
       expect(clientRouter).toBeInstanceOf(ClientRouter)
     })
   })
@@ -69,21 +69,33 @@ describe('ClientRouter', () => {
   describe('#getClients', () => {
     it('should return primary and secondary clients', async () => {
       const simpleDs = new SimpleDataSource(accounts)
-      const clientRouter = new ClientRouter(simpleDs)
-      const wxMsg =  {
-        ToUserName: 'id',
-        FromUserName: 'ouIpDs1npAsCTtjcQ_ERI3LRpfIQ',
-        CreateTime: 1487248700,
-        MsgType: 'event',
-        Event: 'CLICK',
-        EventKey: 'article_57d114fc16a64320b2b48a0f'
+      const clientRouter = new ClientRouter(simpleDs.getClientsByWechatId('wechat_id'))
+      const wxMsg = {
+        toUserName: 'id',
+        fromUserName: 'ouIpDs1npAsCTtjcQ_ERI3LRpfIQ',
+        createTime: 1487248700,
+        msgType: 'event',
+        event: 'CLICK',
+        eventKey: 'article_57d114fc16a64320b2b48a0f'
       }
-      const message = new Message(wxMsg, Buffer.from('rawxml', 'utf8'))
-      const [primary, secondary] = await clientRouter.getClients(message)
+      const message = new Message(
+        wxMsg.fromUserName,
+        wxMsg.toUserName,
+        wxMsg.createTime,
+        wxMsg.msgType,
+        Buffer.from('rawxml', 'utf8')
+      )
+      message.event = wxMsg.event.toLowerCase()
+      const [primary, secondary] = await clientRouter.getTargetClients(message)
       expect(primary).toEqual('http://main.com/click')
       expect(secondary.size).toBe(5)
-      const urls = ['http://main.com/test', 'http://main.com/secondary', 'http://main.com/event_secondary1',
-        'http://main.com/event_secondary2', 'http://main.com/datacube']
+      const urls = [
+        'http://main.com/test',
+        'http://main.com/secondary',
+        'http://main.com/event_secondary1',
+        'http://main.com/event_secondary2',
+        'http://main.com/datacube'
+      ]
       urls.forEach((item) => {
         expect(secondary).toContain(item)
       })

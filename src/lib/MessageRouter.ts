@@ -1,65 +1,89 @@
-import * as Koa from 'koa'
-import ClientRouter from './ClientRouter'
-import {IDataSource} from './DataSource'
+import { Map } from 'immutable'
+import { Context } from 'koa'
+import getRawBody from 'raw-body'
+import Message from '../model/Message'
+import WechatAccount from '../model/WechatAccount'
+import { IDataSource } from './DataSource'
 import Dispatcher from './Dispatcher'
-import Helper from './Helper'
-import {extractAppId} from './Helper'
+import { getSignature, parseXML } from './utils'
+import { WXBizMsgCrypt } from './WXBizMsgCrypt'
 
 class MessageRouter {
-  private dataSource: IDataSource
+  private _dataSource: IDataSource
   private dispatcher: Dispatcher
+  private _crypts: Map<string, WXBizMsgCrypt>
   constructor(dataSource: IDataSource) {
-    const clientRouter = new ClientRouter(dataSource)
-    this.dispatcher = new Dispatcher(clientRouter)
-    this.dataSource = dataSource
+    this.dispatcher = new Dispatcher(dataSource)
+    this._dataSource = dataSource
+    this._crypts = Map()
   }
   public middlewarify() {
-
-    return async (ctx: Koa.Context) => {
-      const query = ctx.query
-      const encrypted = !!(query.encrypt_type && query.encrypt_type === 'aes' && query.msg_signature)
-      const timestamp = query.timestamp
-      const nonce = query.nonce
-      const echostr = query.echostr
-      const appId = extractAppId(ctx.originalUrl)
+    return async (ctx: Context) => {
+      if (!['GET', 'POST'].includes(ctx.method)) {
+        return ctx.throw(501, 'Not Implemented')
+      }
+      const appId: string = ((ctx as any).params && (ctx as any).params.appId) || ctx.query.appId
       if (!appId) {
-        return ctx.throw(404)
+        return ctx.throw(400, 'AppId is required.')
       }
-      const account = this.dataSource.getWechatAccount(appId)
-      if (!account) {
-        return ctx.throw(404)
+      const wechatAccount = this._dataSource.getWechatAccountByAppId(appId)
+      if (!wechatAccount) {
+        return ctx.throw(400, 'Invalid appId')
       }
-      const cryptor = this.dataSource.getCryptor(appId)
-      if (ctx.method === 'GET') {
-        let valid = false
-        if (encrypted) {
-          const signature = query.msg_signature
-          valid = signature === cryptor.getSignature(timestamp, nonce, echostr)
-        } else {
-          valid = query.signature === Helper.getSignature(timestamp, nonce, account.token)
-        }
-        if (!valid) {
+      const encrypted = ctx.query.encrypt_type === 'aes'
+      if (!encrypted) {
+        if (!this._checkSignature(ctx, wechatAccount)) {
           return ctx.throw(401, 'Invalid signature')
-        } else {
-          if (encrypted) {
-            const decrypted = cryptor.decrypt(echostr)
-            ctx.body = decrypted.message
-          } else {
-            ctx.body = echostr
-          }
         }
+      }
+
+      if (ctx.method === 'GET') {
+        const echostr = ctx.query.echostr
+        ctx.body = echostr
       } else if (ctx.method === 'POST') {
-        if (!encrypted) {
-          if (query.signature !== Helper.getSignature(timestamp, nonce, account.token)) {
+        const rawBody: Buffer = await getRawBody(ctx.req, {
+          length: ctx.length,
+          limit: '1mb'
+        })
+        const xml = rawBody.toString()
+        const { xml: data } = await parseXML(xml)
+        let messageXml = xml
+        if (encrypted) {
+          const cryptor = await this._getWechatCrypt(wechatAccount)
+          if (!this._checkEncryptedSignature(ctx, cryptor, data.encrypt)) {
             return ctx.throw(401, 'Invalid signature')
           }
+          messageXml = cryptor.decrypt(data.encrypt)
         }
-        const message = await Helper.extractWechatMessage(ctx, cryptor)
-        await this.dispatcher.dispatch(ctx, message)
-      } else {
-        ctx.throw(501, 'Not Implemented')
+        const { xml: originalMsg } = await parseXML(messageXml)
+        const { fromUserName, toUserName, createTime, msgType } = originalMsg
+
+        const msg = new Message(fromUserName, toUserName, Number.parseInt(createTime, 10), msgType, rawBody)
+        if (msgType === 'event') {
+          const { event, eventKey } = originalMsg
+          msg.event = event
+          msg.eventKey = eventKey
+        }
+        await this.dispatcher.dispatch(ctx, msg)
       }
     }
+  }
+  private async _getWechatCrypt(wechatAccount: WechatAccount) {
+    let crypt = this._crypts.get(wechatAccount.wechatId)
+    if (!crypt) {
+      const { token, encodingAESKey, appId, wechatId } = wechatAccount
+      crypt = new WXBizMsgCrypt(token, encodingAESKey, appId)
+      this._crypts = this._crypts.set(wechatId, crypt)
+    }
+    return crypt
+  }
+  private _checkSignature(ctx: Context, wechatAccount: WechatAccount) {
+    const { signature, timestamp, nonce } = ctx.query
+    return signature === getSignature(timestamp, nonce, wechatAccount.token)
+  }
+  private _checkEncryptedSignature(ctx: Context, cryptor: WXBizMsgCrypt, ciphertext: string) {
+    const { msg_signature, timestamp, nonce } = ctx.query
+    return msg_signature === cryptor.getSignature(timestamp, nonce, ciphertext)
   }
 }
 
