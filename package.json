@@ -46,36 +46,33 @@
   },
   "homepage": "https://github.com/wenwei1202/wechat-distribute#readme",
   "dependencies": {
+    "concat-stream": "^2.0.0",
     "debug": "^4.1.0",
-    "immutable": "^4.0.0-rc.12",
-    "moment": "^2.22.2",
+    "fast-xml-parser": "^4.0.3",
+    "ioredis": "^4.28.5",
+    "js-yaml": "^4.1.0",
+    "node-fetch": "2",
+    "path-to-regexp": "^6.2.0",
     "raw-body": "^2.2.0",
-    "winston": "^3.1.0",
-    "xml2js": "^0.4.19"
+    "winston": "^3.1.0"
   },
   "engines": {
     "node": ">=8.0"
   },
   "devDependencies": {
-    "@types/axios": "^0.14.0",
+    "@types/concat-stream": "^2.0.0",
     "@types/debug": "^0.0.31",
+    "@types/ioredis": "^4.28.8",
     "@types/jest": "^23.3.9",
-    "@types/koa": "^2.0.46",
-    "@types/koa-router": "^7.0.33",
-    "@types/lodash": "^4.14.118",
+    "@types/js-yaml": "^4.0.5",
     "@types/node": "^10.12.5",
     "@types/supertest": "^2.0.6",
-    "@types/xml2js": "^0.4.3",
-    "co-wechat": "^2.3.0",
     "coveralls": "^3.0.2",
-    "ejs": "^2.6.1",
     "jest": "^23.6.0",
-    "koa": "^2.6.2",
-    "koa-router": "^7.4.0",
     "supertest": "^3.3.0",
     "ts-jest": "^23.10.4",
     "ts-node": "^7.0.1",
-    "typescript": "^3.1.6",
+    "typescript": "^4.5.5",
     "wechat-message-mock": "^0.0.9"
   }
 }

@@ -1,14 +1,14 @@
 import crypto from 'crypto'
-import { PKCS7Encoder } from './PKCS7Encoder'
+import { PKCS7Encoder } from './pkcs7-encoder'
 
 const ALGORITHM = 'aes-256-cbc'
 
-export class WXBizMsgCrypt {
+export class WechatCrypt {
   public appId: string
   public token: string
   public aesKey: Buffer
   public iv: Buffer
-  constructor(token: string, encodingAesKey: string, appId: string) {
+  constructor(appId: string, token: string, encodingAesKey: string) {
     if (encodingAesKey.length !== 43) {
       throw new TypeError('IllegalAesKey')
     }
