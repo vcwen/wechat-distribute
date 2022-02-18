@@ -1,16 +1,16 @@
 import { Dispatcher } from './dispatcher'
 import { Route } from './route'
 
-export interface ConfigRoute {
+export interface IConfigRoute {
   primary?: string
   secondary?: string[]
   exclude?: string[]
-  routes?: { [key: string]: ConfigRoute }
+  routes?: { [key: string]: IConfigRoute }
 }
 export class MessageRouter {
   public appId: string
   private routes: Route[] = []
-  constructor(appId: string, routerInfo: ConfigRoute, dispatchers: Map<string, Dispatcher>) {
+  constructor(appId: string, routerInfo: IConfigRoute, dispatchers: Map<string, Dispatcher>) {
     this.appId = appId
     this.setupRoutes('*', routerInfo, undefined, dispatchers)
     console.log(this.routes)
@@ -40,7 +40,7 @@ export class MessageRouter {
       })
     }
   }
-  private setupRoutes(topic: string, configRoute: ConfigRoute, parent: Route, dispatchers: Map<string, Dispatcher>) {
+  private setupRoutes(topic: string, configRoute: IConfigRoute, parent: Route, dispatchers: Map<string, Dispatcher>) {
     const route = new Route(topic, configRoute.primary, configRoute.secondary, configRoute.exclude, parent)
     this.validateRoute(route, dispatchers)
     this.routes.push(route)
@@ -73,7 +73,7 @@ export class MessageRouter {
     let primary = route.primary
     let secondary = new Set<string>(route.secondary ? route.secondary.filter((item) => !exclude.has(item)) : [])
     if (route.parent) {
-      let [parentPrimary, parentSecondary] = this.getTargetsRecursively(
+      const [parentPrimary, parentSecondary] = this.getTargetsRecursively(
         route.parent,
         new Set<string>([...exclude, ...route.exclude])
       )

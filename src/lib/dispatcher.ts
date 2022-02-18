@@ -45,8 +45,7 @@ export class RedisDispatcher extends Dispatcher {
   public dispatchPrimary() {
     throw new Error('dispatch to primary is not supported')
   }
-  public dispatchSecondary(message: Message, req: IncomingMessage) {
-    console.log('put in redis>>>>', message)
-    this.redis.xadd(this.stream, 'MAXLEN', this.maxLen, '*', 'key', 'value')
+  public dispatchSecondary(message: Message) {
+    this.redis.xadd(this.stream, 'MAXLEN', this.maxLen, '*', 'data', JSON.stringify(message.data))
   }
 }

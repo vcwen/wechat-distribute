@@ -1,16 +1,15 @@
 import concat from 'concat-stream'
-import { IncomingMessage, ServerResponse } from 'http'
-// import getRawBody from 'raw-body'
-import { Message } from './message'
-import { WechatAccount } from './wechat-account'
-import { generateSignature } from './utils'
 import { XMLParser } from 'fast-xml-parser'
 import fs from 'fs'
+import { IncomingMessage, ServerResponse } from 'http'
 import Path from 'path'
+import { Message } from './message'
+import { generateSignature } from './utils'
+import { WechatAccount } from './wechat-account'
 
 import yaml from 'js-yaml'
-import { ConfigRoute, MessageRouter } from './message-router'
 import { Dispatcher, HttpDispatcher, RedisDispatcher } from './dispatcher'
+import { IConfigRoute, MessageRouter } from './message-router'
 
 const getRawBody = (req: IncomingMessage) => {
   return new Promise<Buffer>((resolve, reject) => {
@@ -24,12 +23,12 @@ const getRawBody = (req: IncomingMessage) => {
 
 const xmlParser = new XMLParser()
 
-type AccountConfig = {
+interface IAccountConfig {
   name: string
   appId: string
   token: string
   encryptionKey: string
-  dispatchers: {
+  dispatchers: Array<{
     name: string
     type: 'http' | 'redis'
     spec: {
@@ -41,8 +40,8 @@ type AccountConfig = {
       stream: string
       maxLen: number
     }
-  }[]
-  router: ConfigRoute
+  }>
+  router: IConfigRoute
 }
 
 export class MessageDistributer {
@@ -50,8 +49,11 @@ export class MessageDistributer {
   public loadConfig(dirPath: string) {
     const filenames = fs.readdirSync(dirPath)
     filenames.forEach((filename) => {
+      if (!(filename.endsWith('.yaml') || filename.endsWith('.yml'))) {
+        return
+      }
       const filepath = Path.resolve(dirPath, filename)
-      const config = yaml.load(fs.readFileSync(filepath, 'utf8')) as AccountConfig
+      const config = yaml.load(fs.readFileSync(filepath, 'utf8')) as IAccountConfig
       const dispatcherList = config.dispatchers
       const dispatchers = new Map<string, Dispatcher>()
       dispatcherList.forEach((dispatcherInfo) => {

@@ -1,8 +1,8 @@
 import { IncomingMessage, ServerResponse } from 'http'
-import { MessageRouter } from './message-router'
-import { WechatCrypt } from './wechat-crypt'
 import { Dispatcher } from './dispatcher'
 import { Message } from './message'
+import { MessageRouter } from './message-router'
+import { WechatCrypt } from './wechat-crypt'
 
 export class WechatAccount {
   public readonly name: string
@@ -32,8 +32,6 @@ export class WechatAccount {
 
   public distributeMessage(req: IncomingMessage, res: ServerResponse, message: Message): void {
     const [primary, secondary] = this.messageRouter.getTargetClients(message.getTopic())
-    console.log(primary)
-    console.log(secondary)
     if (primary) {
       const dispatcher = this.dispatchers.get(primary)
       dispatcher.dispatchPrimary(message, req, res)
