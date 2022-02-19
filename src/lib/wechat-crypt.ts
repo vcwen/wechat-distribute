@@ -3,46 +3,43 @@ import { PKCS7Encoder } from './pkcs7-encoder'
 
 const ALGORITHM = 'aes-256-cbc'
 
-export class WechatCrypt {
-  public appId: string
-  public token: string
-  public aesKey: Buffer
-  public iv: Buffer
-  constructor(appId: string, token: string, encodingAesKey: string) {
-    if (encodingAesKey.length !== 43) {
-      throw new TypeError('IllegalAesKey')
-    }
-    this.token = token
-    this.appId = appId
-    this.aesKey = Buffer.from(encodingAesKey + '=', 'base64')
-    this.iv = this.aesKey.slice(0, 16)
-  }
-  public encrypt(text: string) {
+export class WechatCrypto {
+  public static encrypt(text: string, appId: string, encryptionKey: string) {
+    const iv = this.getInitialVector(encryptionKey)
     const randomString = crypto.pseudoRandomBytes(16)
     const content = Buffer.from(text)
     const networkBytesOrder = Buffer.alloc(4)
     networkBytesOrder.writeUInt32BE(content.length, 0)
-    const appId = Buffer.from(this.appId)
-    const dataToEncrypt = PKCS7Encoder.encode(Buffer.concat([randomString, networkBytesOrder, content, appId]))
-    const cipher = crypto.createCipheriv(ALGORITHM, this.aesKey, this.iv)
+    const dataToEncrypt = PKCS7Encoder.encode(
+      Buffer.concat([randomString, networkBytesOrder, content, Buffer.from(appId)])
+    )
+    const cipher = crypto.createCipheriv(ALGORITHM, encryptionKey, iv)
     cipher.setAutoPadding(false)
     return Buffer.concat([cipher.update(dataToEncrypt), cipher.final()]).toString('base64')
   }
-  public decrypt(text: string) {
-    const decipher = crypto.createDecipheriv(ALGORITHM, this.aesKey, this.iv)
+
+  public static decrypt(text: string, appId: string, encryptionKey: string) {
+    const iv = this.getInitialVector(encryptionKey)
+    const decipher = crypto.createDecipheriv(ALGORITHM, encryptionKey, iv)
     decipher.setAutoPadding(false)
     const decrypted = PKCS7Encoder.decode(Buffer.concat([decipher.update(text, 'base64'), decipher.final()]))
     const length = decrypted.readUInt32BE(16)
-    const appId = decrypted.slice(20 + length).toString('utf8')
-    if (appId !== this.appId) {
-      throw new Error(`Invalid appId:${appId}`)
+    const decryptedAppId = decrypted.slice(20 + length).toString('utf8')
+    if (appId !== decryptedAppId) {
+      throw new Error(`Invalid appId:${decryptedAppId}`)
     }
     return decrypted.slice(20, 20 + length).toString()
   }
-  public getSignature(timestamp: string, nonce: string, ciphertext: string) {
+
+  public static getSignature(token: string, timestamp: string, nonce: string, ciphertext: string) {
     const shasum = crypto.createHash('sha1')
-    const data = [this.token, timestamp, nonce, ciphertext].sort().join('')
+    const data = [token, timestamp, nonce, ciphertext].sort().join('')
     shasum.update(data)
     return shasum.digest('hex')
+  }
+
+  private static getInitialVector(encryptionKey: string): Buffer {
+    const buffer = Buffer.from(encryptionKey + '=', 'base64')
+    return buffer.slice(0, 16)
   }
 }

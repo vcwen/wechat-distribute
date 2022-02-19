@@ -1,5 +1,6 @@
 import http from 'http'
 import { match } from 'path-to-regexp'
+import { URL } from 'url'
 import config from './config'
 import { MessageDistributer } from './lib/message-distributer'
 

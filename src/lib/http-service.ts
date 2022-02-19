@@ -2,6 +2,7 @@ import concatStream from 'concat-stream'
 import debugLog from 'debug'
 import http, { IncomingMessage, ServerResponse } from 'http'
 import https from 'https'
+import { URL } from 'url'
 import { Message } from './message'
 
 const debug = debugLog('wechat-distriute')

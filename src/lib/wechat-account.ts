@@ -2,14 +2,13 @@ import { IncomingMessage, ServerResponse } from 'http'
 import { Dispatcher } from './dispatcher'
 import { Message } from './message'
 import { MessageRouter } from './message-router'
-import { WechatCrypt } from './wechat-crypt'
+import { WechatCrypto } from './wechat-crypt'
 
 export class WechatAccount {
   public readonly name: string
   public readonly appId: string
   public readonly encryptionKey: string
   public readonly token: string
-  public readonly crypt: WechatCrypt
 
   public dispatchers: Map<string, Dispatcher>
   public messageRouter: MessageRouter
@@ -25,7 +24,6 @@ export class WechatAccount {
     this.appId = appId
     this.encryptionKey = encryptionKey
     this.token = token
-    this.crypt = new WechatCrypt(appId, token, encryptionKey)
     this.messageRouter = messageRouter
     this.dispatchers = dispatchers
   }
@@ -45,5 +43,11 @@ export class WechatAccount {
         dispatcher.dispatchSecondary(message, req)
       })
     }
+  }
+  public getSignature(timestamp: string, nonce: string, encryptedText: string): string {
+    return WechatCrypto.getSignature(this.token, timestamp, nonce, encryptedText)
+  }
+  public decrypt(encryptedText: string): string {
+    return WechatCrypto.decrypt(encryptedText, this.appId, this.encryptionKey)
   }
 }

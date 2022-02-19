@@ -10,6 +10,7 @@ import { WechatAccount } from './wechat-account'
 import yaml from 'js-yaml'
 import { Dispatcher, HttpDispatcher, RedisDispatcher } from './dispatcher'
 import { IConfigRoute, MessageRouter } from './message-router'
+import { URL } from 'url'
 
 const getRawBody = (req: IncomingMessage) => {
   return new Promise<Buffer>((resolve, reject) => {
@@ -124,11 +125,11 @@ export class MessageDistributer {
         const timestamp = reqUrl.searchParams.get('timestamp')
         const nonce = reqUrl.searchParams.get('nonce')
 
-        if (msg_signature !== wechatAccount.crypt.getSignature(timestamp, nonce, rawMessage.encrypt)) {
+        if (msg_signature !== wechatAccount.getSignature(timestamp, nonce, rawMessage.encrypt)) {
           res.statusCode = 401
           return res.end('Invalid signature')
         }
-        const xml = wechatAccount.crypt.decrypt(rawMessage.encrypt)
+        const xml = wechatAccount.decrypt(rawMessage.Encrypt)
         rawMessage = xmlParser.parse(xml)
       }
       console.log(rawMessage)
