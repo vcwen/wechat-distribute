@@ -14,6 +14,7 @@ const server = http.createServer((req, res) => {
   }
   const matchPath = match<{ appId: string }>(config.publicPath)
   const url = new URL(req.url, `http://${req.headers.host}`)
+  console.log(url.searchParams)
   const matchResult = matchPath(url.pathname)
   if (matchResult) {
     const appId = matchResult.params.appId

@@ -20,16 +20,28 @@
 //   console.log('request finish>>>')
 // })
 
-const a = new URL('http://test.com?name=vc')
-const b = new URL('http://abc.com')
-b.search = a.search
-console.log(b.searchParams)
+// const a = new URL('http://test.com?name=vc')
+// const b = new URL('http://abc.com')
+// b.search = a.search
+// console.log(b.searchParams)
 
-import { match } from 'path-to-regexp'
-const matchPath = match<{ appId: string }>('/apps/:appId')
-const result = matchPath('/apps')
-if (result) {
-  console.log(result.params.appId)
-} else {
-  console.log('not match')
-}
+// import { match } from 'path-to-regexp'
+// const matchPath = match<{ appId: string }>('/apps/:appId')
+// const result = matchPath('/apps')
+// if (result) {
+//   console.log(result.params.appId)
+// } else {
+//   console.log('not match')
+// }
+
+import concatStream from 'concat-stream'
+import fs from 'fs'
+import { ReadableStream } from 'stream/web'
+const rs = fs.createReadStream('./Dockerfile')
+const ws = fs.createWriteStream('./new-file')
+const bodyStream = concatStream((buffer) => {
+  console.log(buffer.toString())
+})
+
+rs.pipe(bodyStream)
+rs.pipe(ws)

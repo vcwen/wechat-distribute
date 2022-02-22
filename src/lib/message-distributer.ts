@@ -8,7 +8,7 @@ import { generateSignature } from './utils'
 import { WechatAccount } from './wechat-account'
 
 import yaml from 'js-yaml'
-import { Dispatcher, HttpDispatcher, RedisDispatcher } from './dispatcher'
+import { ContentType, Dispatcher, HttpDispatcher, RedisDispatcher } from './dispatcher'
 import { IConfigRoute, MessageRouter } from './message-router'
 import { URL } from 'url'
 
@@ -34,6 +34,12 @@ interface IAccountConfig {
     type: 'http' | 'redis'
     spec: {
       url: string
+      contentType: ContentType
+      auth: {
+        type: string
+        scheme: string
+        bearerFormat?: string
+      }
       host: string
       port: number
       db: number
@@ -60,7 +66,10 @@ export class MessageDistributer {
       dispatcherList.forEach((dispatcherInfo) => {
         switch (dispatcherInfo.type) {
           case 'http':
-            dispatchers.set(dispatcherInfo.name, new HttpDispatcher(dispatcherInfo.name, dispatcherInfo.spec.url))
+            dispatchers.set(
+              dispatcherInfo.name,
+              new HttpDispatcher(dispatcherInfo.name, dispatcherInfo.spec.url, dispatcherInfo.spec.contentType)
+            )
             break
           case 'redis':
             dispatchers.set(

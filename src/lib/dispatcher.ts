@@ -3,6 +3,12 @@ import { Message } from './message'
 import Redis, { RedisOptions } from 'ioredis'
 import { HttpService } from './http-service'
 
+export interface DispatchOptions {
+  isPrimary: boolean
+  request?: IncomingMessage
+  response?: ServerResponse
+}
+
 export abstract class Dispatcher {
   public type: string
   constructor(public name: string) {}
@@ -10,18 +16,46 @@ export abstract class Dispatcher {
   public abstract dispatchSecondary(message: Message, req: IncomingMessage)
 }
 
+export enum ContentType {
+  ORIGINAL = 'original',
+  JSON = 'json'
+}
+
+export interface HttpDispatchOptions extends DispatchOptions {
+  request: IncomingMessage
+  response: ServerResponse
+  contentType: string
+  auth?: { type: string; scheme: string; bearerFormat?: string }
+}
+
 export class HttpDispatcher extends Dispatcher {
   private httpService: HttpService = new HttpService()
+  public contentType: ContentType
   public url: string
-  constructor(name: string, url: string) {
+  public auth: { type: string; scheme: string; bearerFormat?: string }
+  constructor(name: string, url: string, contentType: ContentType) {
     super(name)
     this.url = url
+    this.contentType = contentType
   }
   public dispatchPrimary(message: Message, req: IncomingMessage, res: ServerResponse) {
-    this.httpService.pipeMessage(this.url, message, req, res)
+    this.httpService.dispatchMessage(message, {
+      isPrimary: true,
+      request: req,
+      response: res,
+      url: this.url,
+      contentType: this.contentType,
+      auth: this.auth
+    })
   }
   public dispatchSecondary(message: Message, req: IncomingMessage) {
-    this.httpService.dispatchMessage(this.url, message, req)
+    this.httpService.dispatchMessage(message, {
+      isPrimary: false,
+      request: req,
+      url: this.url,
+      contentType: this.contentType,
+      auth: this.auth
+    })
   }
 }
 
